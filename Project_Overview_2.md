@@ -1,4 +1,4 @@
-# Project Overview: Chinese Marketplace Helper
+# MarketSage: Intelligent Chinese Marketplace Assistant
 
 ## 1. Initial Analysis
 
@@ -15,9 +15,9 @@ The project follows a well-organized, modular structure:
 
 ### 1B: Existing Code and Documentation
 Core functionalities implemented:
-- Platform detection and integration
-- Price analysis and comparison
-- Scam detection engine
+- MarketSage Scout: Platform detection and smart product discovery
+- MarketSage Insight: Intelligent price analysis and comparison
+- MarketSage Protect: Advanced scam detection engine
 - Product data extraction
 - User interface components
 
@@ -45,7 +45,7 @@ Milestones Achieved:
 
 Remaining Challenges:
 - Platform integration implementation
-- Scam detection algorithm refinement
+- MarketSage Protect algorithm refinement
 - Performance optimization
 - Cross-browser compatibility testing
 
@@ -53,9 +53,10 @@ Remaining Challenges:
 
 ### 2A: Project Vision
 Core Purpose:
-- Create a smart shopping assistant for Chinese marketplace platforms
-- Protect users from scams and fraudulent listings
-- Provide price comparison and analysis tools
+- Provide an intelligent shopping assistant for Chinese marketplace platforms
+- Protect users with MarketSage Protect's advanced security features
+- Deliver smart price comparison with MarketSage Insight
+- Enable efficient product discovery with MarketSage Scout
 
 Problem Statement:
 - Users face difficulties in verifying seller reliability
@@ -69,10 +70,10 @@ Target Users:
 
 ### 2B: Core Features
 Must-Have Features:
-- Real-time price comparison
-- Basic scam detection
-- Seller verification
-- Product search optimization
+- MarketSage Insight: Real-time price comparison
+- MarketSage Protect: Advanced scam detection
+- MarketSage Scout: Smart product discovery
+- Seller verification system
 
 Nice-to-Have Features:
 - AI-powered analysis
@@ -83,14 +84,14 @@ Nice-to-Have Features:
 ### 2C: Implementation Roadmap
 Phase 1 (Core Features):
 - Platform integration framework
-- Basic price comparison
-- Initial scam detection
+- MarketSage Insight: Basic price comparison
+- MarketSage Protect: Initial security features
 - Essential UI components
 
 Phase 2 (Enhanced Features):
-- Advanced scam detection
-- Price history tracking
-- Seller verification system
+- MarketSage Protect: Advanced detection algorithms
+- MarketSage Insight: Price history tracking
+- MarketSage Scout: Enhanced product discovery
 - Performance optimization
 
 Phase 3 (Advanced Features):
@@ -137,11 +138,11 @@ In Progress:
 Immediate Tasks:
 1. Complete platform integration services
 2. Implement core UI components
-3. Develop basic scam detection
+3. Develop MarketSage Protect features
 4. Set up automated testing
 
 Future Actions:
-1. Enhance detection algorithms
+1. Enhance MarketSage Protect algorithms
 2. Optimize performance
 3. Expand platform support
 4. Implement advanced features
@@ -166,8 +167,8 @@ Future Actions:
 
 ## 4. Success Metrics
 - User adoption rate
-- Scam detection accuracy
+- MarketSage Protect detection accuracy
 - Performance benchmarks
 - User satisfaction ratings
 
-This overview serves as a living document and will be updated as the project evolves. Regular reviews and updates will ensure it remains a valuable resource for the team.
+This overview serves as a living document and will be updated as MarketSage evolves. Regular reviews and updates will ensure it remains a valuable resource for the team.

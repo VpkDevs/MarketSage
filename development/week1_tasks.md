@@ -1,37 +1,39 @@
-# Week 1 Development Plan
+# MarketSage: Week 1 Development Plan
 
-## Day 1: Project Setup & Basic Infrastructure
+## Day 1: Project Setup & Core Infrastructure
 
 ### Morning: Initial Setup
 1. **Project Initialization**
    ```bash
    # Create project and install dependencies
-   mkdir chinese-marketplace-extension
-   cd chinese-marketplace-extension
+   mkdir marketsage
+   cd marketsage
    npm init -y
    npm install react react-dom redux react-redux @reduxjs/toolkit axios lodash
    npm install -D typescript webpack webpack-cli webpack-merge @types/react @types/chrome jest cypress eslint prettier
    ```
 
 2. **Configuration Files**
-   - Create manifest.json
+   - Create manifest.json with MarketSage branding
    - Set up tsconfig.json
    - Configure webpack
    - Initialize ESLint and Prettier
 
-### Afternoon: Basic Extension Structure
-1. **Create Core Files**
-   - background/index.ts
-   - content/index.ts
+### Afternoon: Feature Structure Setup
+1. **Create Core Feature Directories**
+   ```bash
+   mkdir -p src/{background,content,popup}/services/{protect,insight,scout}
+   mkdir -p src/common/{types,utils}
+   ```
+
+2. **Initialize Core Files**
+   - background/services/protect/index.ts
+   - background/services/insight/index.ts
+   - background/services/scout/index.ts
    - popup/index.tsx
    - common/types/index.ts
 
-2. **Test Build Process**
-   - Verify webpack configuration
-   - Test extension loading
-   - Check hot reloading
-
-## Day 2: Platform Detection & Data Extraction
+## Day 2: Platform Integration & Data Extraction
 
 ### Morning: Platform Integration
 1. **Platform Detection System**
@@ -48,76 +50,88 @@
    }
    ```
 
-2. **Platform-Specific Selectors**
+2. **MarketSage Feature Selectors**
    ```typescript
    // src/content/platforms/selectors.ts
    export const selectors = {
-     [Platform.TEMU]: {
+     protect: {
+       seller: '.seller-info',
+       ratings: '.seller-ratings',
+       reviews: '.product-reviews'
+     },
+     insight: {
        price: '.product-price',
+       shipping: '.shipping-info',
+       stock: '.stock-info'
+     },
+     scout: {
        title: '.product-title',
-       seller: '.seller-info'
-     },
-     [Platform.ALIEXPRESS]: {
-       // ... AliExpress selectors
-     },
-     [Platform.DHGATE]: {
-       // ... DHGate selectors
+       category: '.product-category',
+       specifications: '.product-specs'
      }
    };
    ```
 
-### Afternoon: Data Extraction
-1. **Price Extraction**
+### Afternoon: Core Feature Services
+1. **MarketSage Protect Service**
    ```typescript
-   // src/content/services/priceExtractor.ts
-   export class PriceExtractor {
-     extract(platform: Platform): Price {
-       const selector = selectors[platform].price;
-       const element = document.querySelector(selector);
-       return this.parsePrice(element);
-     }
-   }
-   ```
-
-2. **Product Information**
-   ```typescript
-   // src/content/services/productExtractor.ts
-   export class ProductExtractor {
-     extractAll(platform: Platform): Product {
+   // src/content/services/protect/riskAnalysis.ts
+   export class RiskAnalysisService {
+     analyze(data: ProductData): RiskAssessment {
        return {
-         price: this.priceExtractor.extract(platform),
-         title: this.titleExtractor.extract(platform),
-         seller: this.sellerExtractor.extract(platform)
+         riskScore: this.calculateRiskScore(data),
+         warnings: this.identifyWarnings(data),
+         sellerTrust: this.assessSellerTrust(data)
        };
      }
    }
    ```
 
-## Day 3: Storage & State Management
-
-### Morning: Storage System
-1. **Storage Service**
+2. **MarketSage Insight Service**
    ```typescript
-   // src/common/services/storage.ts
-   export class StorageService {
-     async save(key: string, data: any): Promise<void> {
-       await chrome.storage.local.set({ [key]: data });
-     }
-
-     async get(key: string): Promise<any> {
-       const result = await chrome.storage.local.get(key);
-       return result[key];
+   // src/content/services/insight/priceAnalysis.ts
+   export class PriceAnalysisService {
+     analyze(data: ProductData): PriceInsight {
+       return {
+         marketComparison: this.compareToMarket(data),
+         historicalTrend: this.analyzeTrends(data),
+         valueAssessment: this.assessValue(data)
+       };
      }
    }
    ```
 
-2. **Data Persistence**
+3. **MarketSage Scout Service**
    ```typescript
-   // src/common/services/productStorage.ts
-   export class ProductStorage {
-     async saveProduct(product: Product): Promise<void> {
-       const storage = new StorageService();
-       await storage.save(`product:${product.id}`, product);
+   // src/content/services/scout/productDiscovery.ts
+   export class ProductDiscoveryService {
+     analyze(data: ProductData): DiscoveryResults {
+       return {
+         similarProducts: this.findSimilar(data),
+         recommendations: this.generateRecommendations(data),
+         categoryInsights: this.analyzeCategory(data)
+       };
+     }
+   }
+   ```
+
+## Day 3: State & Storage Management
+
+### Morning: Storage System
+1. **Feature-Specific Storage**
+   ```typescript
+   // src/common/services/storage.ts
+   export class MarketSageStorage {
+     async saveProtectData(data: ProtectData): Promise<void> {
+       await chrome.storage.local.set({ ['protect:' + data.id]: data });
+     }
+
+     async saveInsightData(data: InsightData): Promise<void> {
+       await chrome.storage.local.set({ ['insight:' + data.id]: data });
+     }
+
+     async saveScoutData(data: ScoutData): Promise<void> {
+       await chrome.storage.local.set({ ['scout:' + data.id]: data });
      }
    }
    ```
@@ -128,175 +142,114 @@
    // src/common/store/index.ts
    export const store = configureStore({
      reducer: {
-       products: productsReducer,
-       analysis: analysisReducer,
+       protect: protectReducer,
+       insight: insightReducer,
+       scout: scoutReducer,
        ui: uiReducer
      }
    });
    ```
 
-2. **Basic Actions & Reducers**
-   ```typescript
-   // src/common/store/products/slice.ts
-   export const productsSlice = createSlice({
-     name: 'products',
-     initialState,
-     reducers: {
-       addProduct: (state, action) => {
-         state.items.push(action.payload);
-       },
-       updateAnalysis: (state, action) => {
-         const product = state.items.find(p => p.id === action.payload.id);
-         if (product) {
-           product.analysis = action.payload.analysis;
-         }
-       }
-     }
-   });
-   ```
+## Day 4: UI Components
 
-## Day 4: Basic UI Components
-
-### Morning: Popup Interface
-1. **Basic Layout**
+### Morning: Feature Components
+1. **MarketSage Protect Components**
    ```typescript
-   // src/popup/components/Layout.tsx
-   export const Layout: React.FC = () => (
-     <div className="popup-container">
-       <Header />
-       <main>
-         <QuickSearch />
-         <CurrentProduct />
-         <Settings />
-       </main>
+   // src/content/components/protect/SecurityBadge.tsx
+   export const SecurityBadge: React.FC<{ assessment: RiskAssessment }> = ({ assessment }) => (
+     <div className="security-badge">
+       <RiskScore score={assessment.riskScore} />
+       <WarningList warnings={assessment.warnings} />
+       <TrustIndicator trust={assessment.sellerTrust} />
      </div>
    );
    ```
 
-2. **Quick Search Component**
+2. **MarketSage Insight Components**
    ```typescript
-   // src/popup/components/QuickSearch.tsx
-   export const QuickSearch: React.FC = () => {
-     const [query, setQuery] = useState('');
-     
-     const handleSearch = () => {
-       // Implement search logic
-     };
-
-     return (
-       <div className="quick-search">
-         <input
-           value={query}
-           onChange={(e) => setQuery(e.target.value)}
-           placeholder="Search across platforms..."
-         />
-         <button onClick={handleSearch}>Search</button>
-       </div>
-     );
-   };
-   ```
-
-### Afternoon: Content Scripts UI
-1. **Warning Badge Component**
-   ```typescript
-   // src/content/components/WarningBadge.tsx
-   export const WarningBadge: React.FC<{ risk: RiskLevel }> = ({ risk }) => (
-     <div className={`warning-badge risk-${risk}`}>
-       {risk === 'high' && '⚠️ High Risk'}
-       {risk === 'medium' && '⚠️ Caution'}
-       {risk === 'low' && 'ℹ️ Info'}
+   // src/content/components/insight/PriceInsight.tsx
+   export const PriceInsight: React.FC<{ analysis: PriceAnalysis }> = ({ analysis }) => (
+     <div className="price-insight">
+       <CurrentPrice price={analysis.current} />
+       <HistoricalTrend trend={analysis.historical} />
+       <MarketComparison comparison={analysis.market} />
      </div>
    );
    ```
 
-2. **Price Overlay Component**
+3. **MarketSage Scout Components**
    ```typescript
-   // src/content/components/PriceOverlay.tsx
-   export const PriceOverlay: React.FC<{ analysis: PriceAnalysis }> = ({ analysis }) => (
-     <div className="price-overlay">
-       <div className="current-price">${analysis.currentPrice}</div>
-       <div className="historical-low">Lowest: ${analysis.historicalLow}</div>
-       <div className="market-comparison">
-         {analysis.marketComparison}% vs market average
-       </div>
+   // src/content/components/scout/ProductDiscovery.tsx
+   export const ProductDiscovery: React.FC<{ results: DiscoveryResults }> = ({ results }) => (
+     <div className="product-discovery">
+       <SimilarProducts products={results.similar} />
+       <Recommendations items={results.recommended} />
+       <CategoryInsights insights={results.category} />
      </div>
    );
    ```
 
 ## Day 5: Testing & Documentation
 
-### Morning: Unit Tests
-1. **Platform Detection Tests**
+### Morning: Feature Testing
+1. **MarketSage Protect Tests**
    ```typescript
-   // tests/unit/platformDetection.test.ts
-   describe('Platform Detection', () => {
-     it('should detect TEMU', () => {
-       // Test TEMU detection
-     });
-
-     it('should detect AliExpress', () => {
-       // Test AliExpress detection
-     });
-
-     it('should detect DHGate', () => {
-       // Test DHGate detection
+   // tests/unit/protect/riskAnalysis.test.ts
+   describe('Risk Analysis Service', () => {
+     it('should detect high-risk listings', () => {
+       const service = new RiskAnalysisService();
+       const result = service.analyze(mockHighRiskProduct);
+       expect(result.riskScore).toBeGreaterThan(0.7);
      });
    });
    ```
 
-2. **Price Extraction Tests**
+2. **MarketSage Insight Tests**
    ```typescript
-   // tests/unit/priceExtraction.test.ts
-   describe('Price Extraction', () => {
-     it('should extract simple prices', () => {
-       // Test basic price extraction
-     });
-
-     it('should handle discounted prices', () => {
-       // Test discounted price extraction
-     });
-
-     it('should handle currency conversion', () => {
-       // Test currency handling
+   // tests/unit/insight/priceAnalysis.test.ts
+   describe('Price Analysis Service', () => {
+     it('should identify good value products', () => {
+       const service = new PriceAnalysisService();
+       const result = service.analyze(mockUndervaluedProduct);
+       expect(result.valueAssessment).toBe('good');
      });
    });
    ```
 
-### Afternoon: Documentation & Review
+### Afternoon: Documentation
 1. **Technical Documentation**
-   - API documentation
+   - Feature-specific API documentation
    - Component documentation
-   - State management guide
-   - Testing guide
+   - Integration guides
+   - Testing documentation
 
 2. **Code Review & Cleanup**
-   - Review all implementations
+   - Review feature implementations
    - Clean up code
-   - Add comments
+   - Add comprehensive comments
    - Update README
 
 ## End of Week Deliverables
 
-### 1. Working Extension with:
-- Platform detection
-- Basic data extraction
-- Storage system
-- State management
-- Basic UI components
+### 1. Core Features MVP:
+- MarketSage Protect: Basic risk assessment
+- MarketSage Insight: Price analysis
+- MarketSage Scout: Product discovery
+- Platform integration foundation
 
 ### 2. Documentation:
-- Setup guide
+- Feature specifications
 - Architecture overview
 - Component documentation
 - Testing guide
 
 ### 3. Tests:
-- Unit tests for core functionality
-- Integration tests for basic features
-- E2E test setup
+- Unit tests for core features
+- Integration tests
+- E2E test foundation
 
 ## Next Week Preview
-1. Price analysis implementation
-2. Seller verification system
-3. Advanced UI components
-4. Cross-platform search
+1. Advanced risk detection algorithms
+2. Historical price tracking
+3. Enhanced product matching
+4. Cross-platform integration

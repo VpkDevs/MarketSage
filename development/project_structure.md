@@ -1,15 +1,21 @@
-# Project Structure & Initialization
+# MarketSage Project Structure
 
 ## Directory Structure
 ```
-chinese-marketplace-extension/
+marketsage/
 ├── src/
 │   ├── background/
 │   │   ├── index.ts
 │   │   ├── services/
-│   │   │   ├── priceAnalysis.ts
-│   │   │   ├── scamDetection.ts
-│   │   │   ├── searchService.ts
+│   │   │   ├── insight/
+│   │   │   │   ├── priceAnalysis.ts
+│   │   │   │   └── marketTrends.ts
+│   │   │   ├── protect/
+│   │   │   │   ├── scamDetection.ts
+│   │   │   │   └── riskAnalysis.ts
+│   │   │   ├── scout/
+│   │   │   │   ├── productSearch.ts
+│   │   │   │   └── categoryMapping.ts
 │   │   │   └── platformIntegration.ts
 │   │   └── utils/
 │   │       ├── storage.ts
@@ -17,10 +23,15 @@ chinese-marketplace-extension/
 │   ├── content/
 │   │   ├── index.ts
 │   │   ├── components/
-│   │   │   ├── PriceOverlay.tsx
-│   │   │   ├── WarningBadge.tsx
-│   │   │   ├── SellerInfo.tsx
-│   │   │   └── SearchResults.tsx
+│   │   │   ├── insight/
+│   │   │   │   ├── PriceOverlay.tsx
+│   │   │   │   └── TrendIndicator.tsx
+│   │   │   ├── protect/
+│   │   │   │   ├── WarningBadge.tsx
+│   │   │   │   └── SecurityAlert.tsx
+│   │   │   └── scout/
+│   │   │       ├── SearchResults.tsx
+│   │   │       └── ProductMatcher.tsx
 │   │   └── platforms/
 │   │       ├── temu.ts
 │   │       ├── aliexpress.ts
@@ -29,9 +40,15 @@ chinese-marketplace-extension/
 │   │   ├── index.tsx
 │   │   ├── App.tsx
 │   │   └── components/
-│   │       ├── Search.tsx
-│   │       ├── Analysis.tsx
-│   │       └── Settings.tsx
+│   │       ├── insight/
+│   │       │   ├── PriceAnalysis.tsx
+│   │       │   └── MarketTrends.tsx
+│   │       ├── protect/
+│   │       │   ├── SecurityStatus.tsx
+│   │       │   └── RiskMetrics.tsx
+│   │       └── scout/
+│   │           ├── Search.tsx
+│   │           └── Recommendations.tsx
 │   └── common/
 │       ├── types/
 │       │   ├── product.ts
@@ -61,9 +78,9 @@ chinese-marketplace-extension/
 ```json
 {
   "manifest_version": 3,
-  "name": "Chinese Marketplace Helper",
+  "name": "MarketSage",
   "version": "1.0.0",
-  "description": "Smart shopping assistant for Chinese marketplaces",
+  "description": "Your Intelligent Marketplace Guide - Smart shopping assistant for Chinese marketplaces",
   "permissions": [
     "storage",
     "activeTab",
@@ -103,7 +120,7 @@ chinese-marketplace-extension/
 ### package.json
 ```json
 {
-  "name": "chinese-marketplace-helper",
+  "name": "marketsage",
   "version": "1.0.0",
   "scripts": {
     "dev": "webpack --config config/webpack.dev.js --watch",
@@ -138,34 +155,6 @@ chinese-marketplace-extension/
 }
 ```
 
-### tsconfig.json
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": false,
-    "jsx": "react-jsx",
-    "baseUrl": "src",
-    "paths": {
-      "@/*": ["*"]
-    }
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "dist"]
-}
-```
-
 ## Initial Type Definitions
 
 ### src/common/types/product.ts
@@ -195,35 +184,19 @@ export interface Product {
   };
 }
 
-export interface ProductAnalysis {
-  riskScore: number;
-  warnings: Warning[];
-  priceAnalysis: PriceAnalysis;
-  sellerAnalysis: SellerAnalysis;
-}
-```
-
-### src/common/types/platform.ts
-```typescript
-export enum Platform {
-  TEMU = 'temu',
-  ALIEXPRESS = 'aliexpress',
-  DHGATE = 'dhgate'
-}
-
-export interface PlatformConfig {
-  name: Platform;
-  baseUrl: string;
-  selectors: {
-    price: string;
-    title: string;
-    seller: string;
-    shipping: string;
+export interface MarketSageAnalysis {
+  protect: {
+    riskScore: number;
+    warnings: Warning[];
+    sellerTrust: number;
   };
-  apiEndpoints?: {
-    search?: string;
-    product?: string;
-    seller?: string;
+  insight: {
+    priceAnalysis: PriceAnalysis;
+    marketTrends: TrendAnalysis;
+  };
+  scout: {
+    relevanceScore: number;
+    alternatives: Product[];
   };
 }
 ```
@@ -232,8 +205,8 @@ export interface PlatformConfig {
 
 1. **Initialize Project**
 ```bash
-mkdir chinese-marketplace-extension
-cd chinese-marketplace-extension
+mkdir marketsage
+cd marketsage
 npm init -y
 ```
 
@@ -246,6 +219,7 @@ npm install -D typescript webpack webpack-cli webpack-merge @types/react @types/
 3. **Create Directory Structure**
 ```bash
 mkdir -p src/{background,content,popup,common}/{components,services,utils,types}
+mkdir -p src/content/components/{insight,protect,scout}
 mkdir -p public/{icons,styles}
 mkdir -p tests/{unit,integration,e2e}
 mkdir config
@@ -256,7 +230,7 @@ mkdir config
 git init
 echo "node_modules/\ndist/\nbuild/" > .gitignore
 git add .
-git commit -m "Initial project setup"
+git commit -m "Initial MarketSage project setup"
 ```
 
 ## Next Steps
@@ -264,5 +238,5 @@ git commit -m "Initial project setup"
 1. Create webpack configurations
 2. Set up ESLint and Prettier
 3. Initialize test environment
-4. Create basic component structure
+4. Create core feature components
 5. Set up CI/CD pipeline

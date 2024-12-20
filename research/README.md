@@ -1,20 +1,43 @@
-# Chinese Marketplace Extension Research
+# MarketSage Research Documentation
 
 ## Directory Structure
 
 ### /platforms
 Detailed analysis of each major Chinese marketplace platform:
-- [TEMU](platforms/temu.md) - Technical analysis, features, and integration strategy
+- [TEMU](platforms/temu.md) - Technical analysis, features, and MarketSage integration strategy
 - [AliExpress](platforms/aliexpress.md) - Platform infrastructure, security measures, and integration approach
 - [DHGate](platforms/dhgate.md) - Technical stack, features, and implementation challenges
 
 ### /vetted
-Analysis of Vetted AI's approach:
-- [Analysis](vetted/analysis.md) - Core process, technical features, and adaptation opportunities
+Analysis of security approaches:
+- [Analysis](vetted/analysis.md) - Core security processes, technical features, and MarketSage Protect implementation
 
 ### /competitors
 Research and analysis of competing solutions:
-- [Research Plan](competitors/research_plan.md) - Comprehensive plan for competitor analysis
+- [Research Plan](competitors/research_plan.md) - Comprehensive market analysis and differentiation strategy
+
+## Core Features Research
+
+1. **MarketSage Protect**
+   - Advanced scam detection algorithms
+   - Seller verification systems
+   - Security measures implementation
+   - Risk assessment models
+   - Real-time threat detection
+
+2. **MarketSage Insight**
+   - Price comparison engine
+   - Historical price tracking
+   - Deal detection algorithms
+   - Market trend analysis
+   - Value assessment metrics
+
+3. **MarketSage Scout**
+   - Product discovery optimization
+   - Search enhancement
+   - Category mapping
+   - Recommendation systems
+   - Cross-platform product matching
 
 ## Research Focus Areas
 
@@ -27,10 +50,10 @@ Research and analysis of competing solutions:
 
 2. **Feature Analysis**
    - Core functionalities
-   - User experience
+   - User experience optimization
    - Technical implementation
    - Integration challenges
-   - Optimization opportunities
+   - Performance optimization
 
 3. **Market Research**
    - User demographics
@@ -42,25 +65,25 @@ Research and analysis of competing solutions:
 ## Next Steps
 
 1. **Platform Research**
-   - Complete analysis of remaining platforms
+   - Complete platform integration analysis
    - Document API specifications
    - Test rate limiting patterns
-   - Analyze security measures
+   - Analyze security requirements
 
-2. **Competitor Analysis**
-   - Execute research plan
-   - Document findings
-   - Create comparison matrix
-   - Identify opportunities
+2. **Feature Development**
+   - MarketSage Protect: Security algorithm refinement
+   - MarketSage Insight: Price analysis engine development
+   - MarketSage Scout: Product discovery optimization
+   - Cross-feature integration planning
 
 3. **Technical Planning**
-   - Define architecture
-   - Plan integration approach
-   - Design security measures
-   - Develop testing strategy
+   - Architecture finalization
+   - Integration approach
+   - Security implementation
+   - Testing strategy development
 
-4. **Feature Development**
-   - Prioritize features
-   - Create development roadmap
-   - Plan implementation phases
-   - Define success metrics
+4. **Implementation Roadmap**
+   - Feature prioritization
+   - Development timeline
+   - Implementation phases
+   - Success metrics definition

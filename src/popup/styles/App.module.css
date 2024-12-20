@@ -1,0 +1,165 @@
+.container {
+  width: 360px;
+  min-height: 480px;
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.header {
+  padding: 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6c757d;
+  transition: all 0.2s ease;
+}
+
+.tabActive {
+  background: #e7f5ff;
+  color: #228be6;
+  font-weight: 500;
+}
+
+.content {
+  padding: 16px;
+}
+
+.section {
+  display: none;
+}
+
+.sectionActive {
+  display: block;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.protectContent {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.metricCard {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.metricCard h3 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.score {
+  font-size: 32px;
+  font-weight: bold;
+  color: #228be6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.scoreLabel {
+  font-size: 14px;
+  color: #868e96;
+  margin-top: 4px;
+}
+
+.warningsCard {
+  background: #fff9db;
+  border: 1px solid #ffd43b;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.warningsCard h3 {
+  margin: 0 0 12px 0;
+  color: #f08c00;
+  font-size: 16px;
+}
+
+.warningsList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.warningItem {
+  color: #495057;
+  padding: 8px 0;
+  border-bottom: 1px solid #ffe066;
+}
+
+.warningItem:last-child {
+  border-bottom: none;
+}
+
+/* Insight Section Styles */
+.priceDisplay {
+  font-size: 28px;
+  font-weight: bold;
+  color: #2b8a3e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.priceBadge {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  background: #40c057;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.historyCard {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.priceHistory {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.historyItem {
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  color: #495057;
+  font-size: 14px;
+}
+
+.insightContent {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}

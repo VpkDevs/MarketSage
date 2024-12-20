@@ -1,4 +1,4 @@
-# Testing Strategy
+# MarketSage Testing Strategy
 
 ## Testing Layers
 
@@ -6,17 +6,23 @@
 ```javascript
 test_structure = {
   services: {
-    price_analysis: [
-      "price extraction accuracy",
-      "currency conversion",
-      "discount calculation",
-      "historical comparison"
-    ],
-    scam_detection: [
+    marketSage_protect: [
       "risk scoring algorithm",
-      "pattern recognition",
-      "threshold validation",
-      "warning generation"
+      "scam pattern detection",
+      "seller verification",
+      "security alerts"
+    ],
+    marketSage_insight: [
+      "price extraction accuracy",
+      "historical analysis",
+      "trend detection",
+      "value assessment"
+    ],
+    marketSage_scout: [
+      "search optimization",
+      "product matching",
+      "category mapping",
+      "recommendation engine"
     ],
     platform_integration: [
       "platform detection",
@@ -45,38 +51,44 @@ test_structure = {
 ### 2. Integration Tests
 ```javascript
 integration_tests = {
+  feature_specific: {
+    protect: [
+      "scam detection flow",
+      "risk assessment pipeline",
+      "seller verification system",
+      "security alerts"
+    ],
+    insight: [
+      "price analysis engine",
+      "trend detection system",
+      "historical tracking",
+      "value assessment"
+    ],
+    scout: [
+      "search optimization",
+      "product discovery",
+      "recommendations",
+      "category mapping"
+    ]
+  },
   platform_specific: {
     temu: [
-      "product page analysis",
-      "search results processing",
-      "seller verification",
-      "price tracking"
+      "product analysis",
+      "data extraction",
+      "feature compatibility",
+      "error handling"
     ],
     aliexpress: [
-      "product data extraction",
-      "review analysis",
+      "product processing",
+      "seller analysis",
       "shipping calculation",
       "variant handling"
     ],
     dhgate: [
-      "bulk pricing analysis",
-      "seller rating extraction",
-      "shipping options",
-      "product specifications"
-    ]
-  },
-  cross_platform: {
-    search: [
-      "term mapping",
-      "result aggregation",
-      "price normalization",
-      "sorting/filtering"
-    ],
-    analysis: [
-      "price comparison",
+      "bulk pricing",
       "seller verification",
-      "risk assessment",
-      "recommendation engine"
+      "shipping options",
+      "specifications"
     ]
   }
 }
@@ -85,38 +97,38 @@ integration_tests = {
 ### 3. E2E Tests
 ```javascript
 e2e_scenarios = {
+  core_features: {
+    protect: [
+      "scam detection flow",
+      "risk assessment",
+      "security alerts",
+      "seller verification"
+    ],
+    insight: [
+      "price analysis",
+      "historical tracking",
+      "trend visualization",
+      "value assessment"
+    ],
+    scout: [
+      "product search",
+      "recommendations",
+      "category browsing",
+      "filtering system"
+    ]
+  },
   user_flows: {
     product_analysis: [
       "visit product page",
-      "trigger analysis",
-      "view details",
-      "check alternatives"
+      "view security status",
+      "check price insights",
+      "view alternatives"
     ],
-    search_flow: [
-      "enter search term",
-      "view results",
+    search_experience: [
+      "perform search",
       "apply filters",
-      "compare items"
-    ],
-    price_tracking: [
-      "add item to track",
-      "set alert conditions",
-      "receive notifications",
-      "view history"
-    ]
-  },
-  edge_cases: {
-    network_issues: [
-      "slow connection",
-      "timeout handling",
-      "retry mechanisms",
-      "offline mode"
-    ],
-    data_variations: [
-      "missing information",
-      "malformed data",
-      "extreme values",
-      "special characters"
+      "compare items",
+      "save products"
     ]
   }
 }
@@ -124,147 +136,129 @@ e2e_scenarios = {
 
 ## Test Implementation
 
-### 1. Unit Test Setup
+### 1. Feature-Specific Tests
 ```typescript
-// tests/unit/services/priceAnalysis.test.ts
-describe('Price Analysis Service', () => {
-  const service = new PriceAnalysisService();
+// tests/unit/services/protect/riskAnalysis.test.ts
+describe('MarketSage Protect: Risk Analysis', () => {
+  const protectService = new ProtectService();
 
-  test('should detect significant price drops', () => {
-    const result = service.analyzePriceChange({
-      current: 10,
-      historical: [50, 45, 40, 35]
+  test('should detect high-risk listings', () => {
+    const result = protectService.analyzeRisk({
+      price: { current: 10, market: 100 },
+      seller: { rating: 2, age: '1 month' }
     });
-    expect(result.isSignificantDrop).toBe(true);
-    expect(result.dropPercentage).toBe(80);
-  });
-
-  test('should identify market price anomalies', () => {
-    const result = service.analyzeMarketPrice({
-      price: 10,
-      marketAverage: 100,
-      standardDeviation: 20
-    });
-    expect(result.isAnomaly).toBe(true);
+    expect(result.riskLevel).toBe('high');
     expect(result.confidenceScore).toBeGreaterThan(0.9);
+  });
+});
+
+// tests/unit/services/insight/priceAnalysis.test.ts
+describe('MarketSage Insight: Price Analysis', () => {
+  const insightService = new InsightService();
+
+  test('should identify value opportunities', () => {
+    const result = insightService.analyzeValue({
+      price: 80,
+      marketAverage: 100,
+      historicalLow: 75
+    });
+    expect(result.isGoodValue).toBe(true);
+    expect(result.savingsPercentage).toBe(20);
+  });
+});
+
+// tests/unit/services/scout/productMatch.test.ts
+describe('MarketSage Scout: Product Matching', () => {
+  const scoutService = new ScoutService();
+
+  test('should match similar products', () => {
+    const result = scoutService.findMatches({
+      product: mockProduct,
+      platforms: ['temu', 'aliexpress']
+    });
+    expect(result.matches).toHaveLength(3);
+    expect(result.relevanceScores).toBeGreaterThan(0.8);
   });
 });
 ```
 
 ### 2. Integration Test Setup
 ```typescript
-// tests/integration/platformIntegration.test.ts
-describe('Platform Integration', () => {
-  const analyzer = new ProductAnalyzer();
+// tests/integration/featureIntegration.test.ts
+describe('MarketSage Feature Integration', () => {
+  const marketSage = new MarketSage();
 
-  test('should extract and analyze TEMU product', async () => {
-    const mockHtml = loadFixture('temu-product-page.html');
-    const result = await analyzer.analyzePage(mockHtml, Platform.TEMU);
+  test('should provide comprehensive product analysis', async () => {
+    const mockProduct = loadFixture('product-page.html');
+    const result = await marketSage.analyzeProduct(mockProduct);
     
-    expect(result.product).toBeDefined();
-    expect(result.analysis).toBeDefined();
-    expect(result.warnings).toBeArray();
-  });
-
-  test('should handle cross-platform search', async () => {
-    const results = await analyzer.searchAcrossPlatforms('wireless earbuds');
-    
-    expect(results.temu).toBeArray();
-    expect(results.aliexpress).toBeArray();
-    expect(results.dhgate).toBeArray();
+    expect(result.protect).toBeDefined();
+    expect(result.insight).toBeDefined();
+    expect(result.scout).toBeDefined();
   });
 });
 ```
 
 ### 3. E2E Test Setup
 ```typescript
-// tests/e2e/productAnalysis.spec.ts
-describe('Product Analysis Flow', () => {
+// tests/e2e/userExperience.spec.ts
+describe('MarketSage User Experience', () => {
   beforeEach(() => {
     cy.visit('https://www.temu.com/example-product');
   });
 
-  it('should show analysis overlay', () => {
-    cy.get('.product-price').should('be.visible');
-    cy.get('.analysis-overlay').should('be.visible');
-    cy.get('.risk-score').should('exist');
-  });
-
-  it('should handle user interactions', () => {
-    cy.get('.analysis-trigger').click();
-    cy.get('.detailed-analysis').should('be.visible');
-    cy.get('.price-history-chart').should('exist');
+  it('should show comprehensive analysis', () => {
+    cy.get('.marketsage-overlay').should('be.visible');
+    cy.get('.protect-score').should('exist');
+    cy.get('.price-insight').should('exist');
     cy.get('.similar-products').should('exist');
   });
 });
 ```
 
-## Test Categories
+## Performance Metrics
 
-### 1. Functionality Testing
 ```javascript
-functionality_tests = {
-  core_features: [
-    "price extraction accuracy",
-    "scam detection reliability",
-    "search functionality",
-    "data persistence"
-  ],
-  user_interactions: [
-    "UI responsiveness",
-    "navigation flows",
-    "error handling",
-    "feedback systems"
-  ],
-  platform_specific: [
-    "selector accuracy",
-    "data extraction",
-    "feature compatibility",
-    "error scenarios"
-  ]
-}
-```
-
-### 2. Performance Testing
-```javascript
-performance_metrics = {
+performance_requirements = {
   response_times: {
-    analysis: "< 500ms",
-    search: "< 1000ms",
-    ui_updates: "< 100ms"
+    protect: {
+      risk_analysis: "< 300ms",
+      seller_verification: "< 500ms"
+    },
+    insight: {
+      price_analysis: "< 200ms",
+      trend_detection: "< 400ms"
+    },
+    scout: {
+      search: "< 800ms",
+      recommendations: "< 600ms"
+    }
   },
   resource_usage: {
     memory: "< 100MB",
     cpu: "< 10%",
     storage: "< 50MB"
-  },
-  concurrent_operations: {
-    max_searches: 5,
-    max_analyses: 3,
-    background_tasks: 2
   }
 }
 ```
 
-### 3. Security Testing
+## Security Testing
+
 ```javascript
 security_tests = {
-  data_handling: [
+  data_protection: [
     "secure storage",
     "data encryption",
-    "privacy compliance",
-    "data cleanup"
+    "privacy compliance"
   ],
   api_security: [
     "request validation",
     "response sanitization",
-    "error handling",
     "rate limiting"
   ],
-  user_protection: [
+  user_safety: [
     "input validation",
     "XSS prevention",
-    "CSRF protection",
     "secure communications"
   ]
 }
@@ -275,7 +269,7 @@ security_tests = {
 ### 1. CI/CD Pipeline
 ```yaml
 # .github/workflows/test.yml
-name: Test Suite
+name: MarketSage Test Suite
 on: [push, pull_request]
 jobs:
   test:
@@ -284,51 +278,53 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install Dependencies
         run: npm install
-      - name: Run Unit Tests
-        run: npm run test:unit
+      - name: Run Feature Tests
+        run: |
+          npm run test:protect
+          npm run test:insight
+          npm run test:scout
       - name: Run Integration Tests
         run: npm run test:integration
       - name: Run E2E Tests
         run: npm run test:e2e
 ```
 
-### 2. Test Coverage
+### 2. Coverage Requirements
 ```javascript
 coverage_requirements = {
-  unit_tests: {
-    statements: "90%",
-    branches: "85%",
-    functions: "90%",
-    lines: "90%"
+  feature_tests: {
+    protect: "95%",
+    insight: "90%",
+    scout: "90%"
   },
   integration_tests: {
     critical_paths: "100%",
-    error_scenarios: "90%",
-    platform_specific: "85%"
+    error_handling: "90%",
+    cross_feature: "85%"
   },
   e2e_tests: {
     user_flows: "95%",
-    edge_cases: "80%",
-    performance: "90%"
+    edge_cases: "80%"
   }
 }
 ```
 
 ## Next Steps
 
-1. **Setup Test Environment**
-   - Configure Jest
-   - Setup Cypress
-   - Create test utilities
-   - Prepare test data
+1. **Test Environment Setup**
+   - Configure Jest with TypeScript
+   - Setup Cypress for E2E
+   - Create test fixtures
+   - Prepare mock data
 
-2. **Implement Core Tests**
-   - Unit tests for services
-   - Integration tests for platforms
-   - E2E tests for main flows
+2. **Core Feature Testing**
+   - Implement MarketSage Protect tests
+   - Develop MarketSage Insight tests
+   - Create MarketSage Scout tests
+   - Cross-feature integration tests
 
-3. **Automation Setup**
-   - Configure CI/CD
-   - Setup coverage reporting
+3. **Automation & Monitoring**
+   - Setup CI/CD pipeline
+   - Configure coverage reporting
+   - Implement performance monitoring
    - Create test documentation
-   - Implement monitoring
