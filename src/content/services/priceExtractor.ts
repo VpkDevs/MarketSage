@@ -1,19 +1,16 @@
-import { Platform, Price } from '../../common/types';
+ import { Platform, Price } from '../../common/types';
 import { DataProcessing } from '../../common/utils/dataProcessing';
+import { PlatformDetector } from './platformDetector';
 
 export class PriceExtractor {
-  private platform: Platform;
+  private platformDetector: PlatformDetector;
 
   constructor() {
-    this.platform = Platform.UNKNOWN;
-  }
-
-  setPlatform(platform: Platform) {
-    this.platform = platform;
+    this.platformDetector = new PlatformDetector();
   }
 
   async extract(): Promise<Price> {
-    if (this.platform === Platform.UNKNOWN) {
+    if (!this.platformDetector.isSupported()) {
       return {
         current: 0,
         currency: 'USD',
@@ -22,13 +19,36 @@ export class PriceExtractor {
       };
     }
 
-    const selectors = this.getPlatformSelectors();
-    const currentElement = document.querySelector(selectors.current);
-    const originalElement = document.querySelector(selectors.original);
+    const platform = this.platformDetector.getCurrentPlatform();
+    const priceSelector = this.platformDetector.getSelector('price');
+    const currentElement = document.querySelector(priceSelector);
+
+    // Define all selectors
+    const originalSelectors = [];
+    
+    // Add platform-specific selectors
+    switch (platform) {
+      case Platform.ALIEXPRESS:
+        originalSelectors.push('.product-price-original', '.product-price-del');
+        break;
+      case Platform.DHGATE:
+        originalSelectors.push('.price-was', '.original-price');
+        break;
+      case Platform.TEMU:
+        originalSelectors.push('.original-price', '.old-price', '.was-price');
+        break;
+    }
+    
+    // Add common fallback selectors
+    originalSelectors.push('.original-price', '.old-price', '.was-price');
+    
+    const originalElement = originalSelectors
+      .map(selector => document.querySelector(selector))
+      .find(element => element !== null) || null; // Ensure null instead of undefined
     
     const currentPrice = this.getCurrentPrice(currentElement);
     const originalPrice = this.getOriginalPrice(originalElement);
-    const currency = this.getCurrency(currentElement?.textContent || '', selectors.current);
+    const currency = this.getCurrency(currentElement?.textContent || '', platform);
     
     return {
       current: currentPrice,
@@ -36,33 +56,6 @@ export class PriceExtractor {
       original: originalPrice,
       discount: originalPrice ? DataProcessing.calculateDiscount(originalPrice, currentPrice) : undefined
     };
-  }
-
-  private getPlatformSelectors(): { current: string; original: string } {
-    const commonSelectors = {
-      current: '.price-current',
-      original: '.price-original'
-    };
-
-    switch (this.platform) {
-      case Platform.TEMU:
-        return {
-          current: '.price-current, .actual-price',
-          original: '.price-original, .original-price'
-        };
-      case Platform.ALIEXPRESS:
-        return {
-          current: '.price-current, .product-price-value',
-          original: '.price-original, .product-price-original'
-        };
-      case Platform.DHGATE:
-        return {
-          current: '.price-current, .price-now',
-          original: '.price-original, .price-was'
-        };
-      default:
-        return commonSelectors;
-    }
   }
 
   private getCurrentPrice(element: Element | null): number {
@@ -76,19 +69,7 @@ export class PriceExtractor {
     return price > 0 ? price : undefined;
   }
 
-  private getCurrency(priceText: string, selector: string): string {
-    // If using platform-specific selector, use platform default currency
-    if (!selector.includes('.price-current')) {
-      switch (this.platform) {
-        case Platform.ALIEXPRESS:
-          return 'EUR';
-        case Platform.DHGATE:
-          return 'GBP';
-        default:
-          break;
-      }
-    }
-
+  private getCurrency(priceText: string, platform: Platform): string {
     // Define currency symbols in order of precedence
     const currencySymbols = [
       { symbol: '€', currency: 'EUR' },
@@ -97,14 +78,23 @@ export class PriceExtractor {
       { symbol: '$', currency: 'USD' }
     ];
 
-    // Find the first matching currency symbol
+    // First try to detect from price text
     for (const { symbol, currency } of currencySymbols) {
       if (priceText.includes(symbol)) {
         return currency;
       }
     }
 
-    // Default to USD
-    return 'USD';
+    // If no symbol found, use platform default
+    switch (platform) {
+      case Platform.ALIEXPRESS:
+        return 'EUR';
+      case Platform.DHGATE:
+        return 'GBP';
+      case Platform.TEMU:
+        return 'USD';
+      default:
+        return 'USD';
+    }
   }
 }

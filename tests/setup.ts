@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 
+// Mock storage
 const storage: { [key: string]: any } = {};
 
 const mockChrome = {
@@ -64,15 +65,41 @@ const mockChrome = {
   }
 };
 
-// Assign the mock to the global object
-Object.assign(globalThis, { chrome: mockChrome });
+// Mock URL and Location
+class MockURL {
+  href: string;
+  constructor(url: string) {
+    this.href = url;
+  }
+}
 
-// Reset storage and mocks before each test
+// Setup global mocks
+Object.defineProperty(global, 'chrome', {
+  value: mockChrome,
+  writable: true
+});
+
+Object.defineProperty(global, 'URL', {
+  value: MockURL,
+  writable: true
+});
+
+// Reset before each test
 beforeEach(() => {
+  // Clear storage
   Object.keys(storage).forEach(key => {
     delete storage[key];
   });
+
+  // Reset all mocks
   jest.clearAllMocks();
+
+  // Reset document body
+  document.body.innerHTML = '';
+
+  // Reset window location
+  delete (window as any).location;
+  window.location = new URL('http://localhost') as any;
 });
 
 export {};

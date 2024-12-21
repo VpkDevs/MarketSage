@@ -1,87 +1,34 @@
 import { Product, Platform, Price } from '../../common/types';
 import { DataProcessing } from '../../common/utils/dataProcessing';
 import { PriceExtractor } from './priceExtractor';
+import { PlatformDetector } from './platformDetector';
 
 export class ProductExtractor {
-  private platform: Platform;
+  private platformDetector: PlatformDetector;
   private priceExtractor: PriceExtractor;
 
   constructor() {
-    this.platform = Platform.UNKNOWN;
+    this.platformDetector = new PlatformDetector();
     this.priceExtractor = new PriceExtractor();
   }
 
-  setPlatform(platform: Platform) {
-    this.platform = platform;
-    this.priceExtractor.setPlatform(platform);
-  }
-
   async extract(): Promise<Product> {
-    const selectors = this.getPlatformSelectors();
+    if (!this.platformDetector.isSupported()) {
+      throw new Error('Unsupported platform');
+    }
+
+    const config = this.platformDetector.getConfig();
     
     return {
       id: await this.extractProductId(),
-      title: this.extractTitle(selectors.title),
-      description: this.extractDescription(selectors.description),
+      title: this.extractTitle(),
+      description: this.extractDescription(),
       price: await this.priceExtractor.extract(),
-      images: this.extractImages(selectors.images),
-      seller: await this.extractSeller(selectors.seller),
-      platform: this.platform,
+      images: this.extractImages(),
+      seller: await this.extractSeller(),
+      platform: this.platformDetector.getCurrentPlatform(),
       url: window.location.href
     };
-  }
-
-  private getPlatformSelectors(): {
-    title: string;
-    description: string;
-    images: string;
-    seller: {
-      name: string;
-      rating: string;
-    };
-  } {
-    switch (this.platform) {
-      case Platform.TEMU:
-        return {
-          title: '.product-title, .item-title',
-          description: '.product-description, .item-description',
-          images: '.product-image img, .gallery-image img',
-          seller: {
-            name: '.seller-name, .store-name',
-            rating: '.seller-rating, .store-rating'
-          }
-        };
-      case Platform.ALIEXPRESS:
-        return {
-          title: '.product-title-text',
-          description: '.product-description',
-          images: '.magnifier-image img',
-          seller: {
-            name: '.shop-name',
-            rating: '.shop-rate-score'
-          }
-        };
-      case Platform.DHGATE:
-        return {
-          title: '.product-name',
-          description: '.product-desc',
-          images: '.product-img img',
-          seller: {
-            name: '.store-info-name',
-            rating: '.store-info-rating'
-          }
-        };
-      default:
-        return {
-          title: '',
-          description: '',
-          images: '',
-          seller: {
-            name: '',
-            rating: ''
-          }
-        };
-    }
   }
 
   private async extractProductId(): Promise<string> {
@@ -113,40 +60,62 @@ export class ProductExtractor {
     return 'unknown';
   }
 
-  private extractTitle(selector: string): string {
-    if (!selector) return '';
-    const titleElement = document.querySelector(selector);
+  private extractTitle(): string {
+    const titleSelector = this.platformDetector.getSelector('title');
+    const titleElement = document.querySelector(titleSelector);
     return DataProcessing.normalizeTitle(titleElement?.textContent || '');
   }
 
-  private extractDescription(selector: string): string {
-    if (!selector) return '';
-    const descElement = document.querySelector(selector);
-    return descElement?.textContent?.trim() || '';
+  private extractDescription(): string | undefined {
+    const descriptionSelector = this.platformDetector.getSelector('description');
+    const descElement = document.querySelector(descriptionSelector);
+    const description = descElement?.textContent?.trim();
+    return description || undefined;
   }
 
-  private extractImages(selector: string): string[] {
-    if (!selector) return [];
-    const imageElements = document.querySelectorAll<HTMLImageElement>(selector);
+  private extractImages(): string[] {
     const images: string[] = [];
     
-    imageElements.forEach(img => {
-      const src = img.getAttribute('src');
-      if (src && !src.includes('placeholder') && src.trim() !== '') {
-        images.push(src);
-      }
+    // Try to find image gallery or main product image
+    const selectors = [
+      'img[data-role="product-image"]',
+      '.product-gallery img',
+      '.product-image img',
+      '.gallery-image img'
+    ];
+
+    selectors.forEach(selector => {
+      const elements = document.querySelectorAll<HTMLImageElement>(selector);
+      elements.forEach(img => {
+        const src = img.getAttribute('src');
+        if (src && !src.includes('placeholder') && src.trim() !== '') {
+          images.push(src);
+        }
+      });
     });
 
     return [...new Set(images)]; // Remove duplicates
   }
 
-  private async extractSeller(selectors: { name: string; rating: string }): Promise<{
+  private async extractSeller(): Promise<{
     id: string;
     name: string;
     rating?: number;
   }> {
-    const nameElement = document.querySelector(selectors.name);
-    const ratingElement = document.querySelector(selectors.rating);
+    const sellerSelector = this.platformDetector.getSelector('seller');
+    const nameElement = document.querySelector(sellerSelector);
+    
+    // Try to find seller rating
+    const ratingSelectors = [
+      '.seller-rating',
+      '.store-rating',
+      '.shop-rating'
+    ];
+    
+    const ratingElement = ratingSelectors
+      .map(selector => document.querySelector(selector))
+      .find(element => element !== null);
+
     const ratingText = ratingElement?.textContent?.trim() || '';
     const rating = parseFloat(ratingText);
 

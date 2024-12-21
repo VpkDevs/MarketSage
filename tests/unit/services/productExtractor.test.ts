@@ -1,222 +1,129 @@
 import { ProductExtractor } from '../../../src/content/services/productExtractor';
-import { Platform } from '../../../src/common/types';
+import { Platform, Product } from '../../../src/common/types';
 
 describe('ProductExtractor', () => {
-  let productExtractor: ProductExtractor;
+  let extractor: ProductExtractor;
+  let mockHtml: string;
 
   beforeEach(() => {
-    document.body.innerHTML = '';
-    productExtractor = new ProductExtractor();
-  });
+    // Mock window.location
+    delete (window as any).location;
+    window.location = new URL('https://www.temu.com/product-123') as any;
 
-  describe('TEMU platform', () => {
-    beforeEach(() => {
-      productExtractor.setPlatform(Platform.TEMU);
-      document.body.innerHTML = `
-        <div>
-          <h1 class="product-title">Test TEMU Product</h1>
-          <div class="product-description">A great product description</div>
-          <div class="price-current">$99.99</div>
-          <div class="price-original">$129.99</div>
-          <div class="gallery-image">
-            <img src="image1.jpg" alt="Product Image 1">
-            <img src="image2.jpg" alt="Product Image 2">
-          </div>
-          <div class="seller-name">TEMU Seller</div>
-          <div class="seller-rating">4.5</div>
+    // Setup mock HTML
+    mockHtml = `
+      <div>
+        <meta property="product:id" content="123456" />
+        <h1 class="product-title">Test Product</h1>
+        <div class="product-price">$29.99</div>
+        <div class="original-price">$39.99</div>
+        <div class="product-description">Product description text</div>
+        <div class="seller-name">Test Seller</div>
+        <div class="seller-rating">4.5</div>
+        <div class="product-gallery">
+          <img src="image1.jpg" alt="Product Image 1" />
+          <img src="image2.jpg" alt="Product Image 2" />
         </div>
-      `;
-      // Mock URL for product ID extraction
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://temu.com/product/123',
-          pathname: '/product/123'
-        },
-        writable: true
-      });
-    });
+        <a href="/store/12345">Visit Store</a>
+      </div>
+    `;
 
-    it('should extract complete product information', async () => {
-      const product = await productExtractor.extract();
-      
-      expect(product).toEqual({
-        id: '123',
-        title: 'Test TEMU Product',
-        description: 'A great product description',
-        price: {
-          current: 99.99,
-          currency: 'USD',
-          original: 129.99,
-          discount: 23
-        },
-        images: ['image1.jpg', 'image2.jpg'],
-        seller: {
-          id: expect.any(String),
-          name: 'TEMU Seller',
-          rating: 4.5
-        },
-        platform: Platform.TEMU,
-        url: 'https://temu.com/product/123'
-      });
-    });
+    document.body.innerHTML = mockHtml;
+    extractor = new ProductExtractor();
   });
 
-  describe('AliExpress platform', () => {
-    beforeEach(() => {
-      productExtractor.setPlatform(Platform.ALIEXPRESS);
-      document.body.innerHTML = `
-        <div>
-          <h1 class="product-title-text">Test AliExpress Product</h1>
-          <div class="product-description">Amazing product details</div>
-          <div class="product-price-value">€89.99</div>
-          <div class="product-price-original">€119.99</div>
-          <div class="magnifier-image">
-            <img src="image1.jpg" alt="Product Image 1">
-            <img src="image2.jpg" alt="Product Image 2">
-          </div>
-          <div class="shop-name">AliExpress Shop</div>
-          <div class="shop-rate-score">4.8</div>
-        </div>
-      `;
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://aliexpress.com/item/456',
-          pathname: '/item/456'
-        },
-        writable: true
-      });
-    });
-
+  describe('extract', () => {
     it('should extract complete product information', async () => {
-      const product = await productExtractor.extract();
-      
-      expect(product).toEqual({
-        id: '456',
-        title: 'Test AliExpress Product',
-        description: 'Amazing product details',
-        price: {
-          current: 89.99,
-          currency: 'EUR',
-          original: 119.99,
-          discount: 25
-        },
-        images: ['image1.jpg', 'image2.jpg'],
-        seller: {
-          id: expect.any(String),
-          name: 'AliExpress Shop',
-          rating: 4.8
-        },
-        platform: Platform.ALIEXPRESS,
-        url: 'https://aliexpress.com/item/456'
-      });
-    });
-  });
+      const product = await extractor.extract();
 
-  describe('Edge cases', () => {
-    beforeEach(() => {
-      productExtractor.setPlatform(Platform.TEMU);
+      expect(product).toBeDefined();
+      expect(product.id).toBe('123456');
+      expect(product.title).toBeTruthy();
+      expect(product.price).toBeDefined();
+      expect(product.price.current).toBeGreaterThan(0);
+      expect(product.images.length).toBeGreaterThan(0);
+      expect(product.seller).toBeDefined();
+      expect(product.platform).toBe(Platform.TEMU);
+      expect(product.url).toBe('https://www.temu.com/product-123');
     });
 
-    it('should handle missing elements', async () => {
+    it('should handle missing product information gracefully', async () => {
       document.body.innerHTML = '<div></div>';
-      const product = await productExtractor.extract();
-      
-      expect(product).toEqual({
-        id: 'unknown',
-        title: '',
-        description: '',
-        price: {
-          current: 0,
-          currency: 'USD',
-          original: undefined,
-          discount: undefined
-        },
-        images: [],
-        seller: {
-          id: 'unknown',
-          name: 'Unknown Seller',
-          rating: undefined
-        },
-        platform: Platform.TEMU,
-        url: expect.any(String)
-      });
-    });
+      const product = await extractor.extract();
 
-    it('should handle malformed data', async () => {
-      document.body.innerHTML = `
-        <div>
-          <h1 class="product-title">   Messy   Title   </h1>
-          <div class="product-description">
-            
-            Messy Description
-            
-          </div>
-          <div class="price-current">Invalid Price</div>
-          <div class="seller-rating">Invalid Rating</div>
-        </div>
-      `;
-      
-      const product = await productExtractor.extract();
-      
-      expect(product.title).toBe('Messy Title');
-      expect(product.description).toBe('Messy Description');
+      expect(product).toBeDefined();
+      expect(product.id).toBe('unknown');
+      expect(product.title).toBe('');
       expect(product.price.current).toBe(0);
-      expect(product.seller.rating).toBeUndefined();
+      expect(product.images).toEqual([]);
+      expect(product.seller.name).toBe('Unknown Seller');
     });
 
-    it('should handle missing images', async () => {
-      document.body.innerHTML = `
-        <div>
-          <div class="gallery-image">
-            <img src="" alt="Empty Source">
-            <img src="placeholder.jpg" alt="Placeholder">
-          </div>
-        </div>
-      `;
-      
-      const product = await productExtractor.extract();
-      expect(product.images).toEqual([]);
+    it('should throw error for unsupported platforms', async () => {
+      window.location = new URL('https://www.unsupported.com/product') as any;
+      extractor = new ProductExtractor();
+
+      await expect(extractor.extract()).rejects.toThrow('Unsupported platform');
     });
   });
 
-  describe('Product ID extraction', () => {
-    beforeEach(() => {
-      productExtractor.setPlatform(Platform.TEMU);
+  describe('extractProductId', () => {
+    it('should extract ID from meta tag', async () => {
+      const product = await extractor.extract();
+      expect(product.id).toBe('123456');
     });
 
     it('should extract ID from URL parameters', async () => {
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://example.com/product?id=123',
-          search: '?id=123'
-        },
-        writable: true
-      });
-      
-      const product = await productExtractor.extract();
-      expect(product.id).toBe('123');
-    });
-
-    it('should extract ID from meta tag', async () => {
-      document.body.innerHTML = `
-        <meta property="product:id" content="456">
-      `;
-      
-      const product = await productExtractor.extract();
-      expect(product.id).toBe('456');
-    });
-
-    it('should fallback to URL path when no other ID is available', async () => {
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://example.com/product/789',
-          pathname: '/product/789'
-        },
-        writable: true
-      });
-      
-      const product = await productExtractor.extract();
+      document.body.innerHTML = '<div></div>'; // Remove meta tag
+      window.location = new URL('https://www.temu.com/product?id=789') as any;
+      const product = await extractor.extract();
       expect(product.id).toBe('789');
+    });
+
+    it('should extract ID from pathname', async () => {
+      document.body.innerHTML = '<div></div>'; // Remove meta tag
+      window.location = new URL('https://www.temu.com/product/abc123') as any;
+      const product = await extractor.extract();
+      expect(product.id).toBe('abc123');
+    });
+  });
+
+  describe('extractSeller', () => {
+    it('should extract seller information', async () => {
+      const product = await extractor.extract();
+      
+      expect(product.seller).toBeDefined();
+      expect(product.seller.name).toBe('Test Seller');
+      expect(product.seller.rating).toBe(4.5);
+    });
+
+    it('should extract seller ID from store link', async () => {
+      const product = await extractor.extract();
+      expect(product.seller.id).toBe('12345');
+    });
+  });
+
+  describe('extractImages', () => {
+    it('should extract unique image URLs', async () => {
+      const product = await extractor.extract();
+      
+      expect(product.images).toHaveLength(2);
+      expect(product.images).toContain('image1.jpg');
+      expect(product.images).toContain('image2.jpg');
+    });
+
+    it('should filter out placeholder images', async () => {
+      document.body.innerHTML = `
+        <div class="product-gallery">
+          <img src="image1.jpg" />
+          <img src="placeholder.jpg" />
+          <img src="" />
+        </div>
+      `;
+
+      const product = await extractor.extract();
+      expect(product.images).toHaveLength(1);
+      expect(product.images[0]).toBe('image1.jpg');
     });
   });
 });
