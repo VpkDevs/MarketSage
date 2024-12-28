@@ -4,9 +4,12 @@ module.exports = {
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src/', '<rootDir>/tests/'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/setup.ts'
+  ],
   testMatch: [
     '**/tests/**/*.test.ts',
     '**/tests/**/*.test.tsx'
@@ -21,5 +24,36 @@ module.exports = {
     url: 'http://localhost'
   },
   verbose: true,
-  testTimeout: 10000
+  collectCoverage: true,
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/**/index.{ts,tsx}',
+    '!src/types/**/*'
+  ],
+  coverageReporters: ['text', 'lcov', 'html'],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  },
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json',
+      diagnostics: {
+        warnOnly: true
+      }
+    }
+  },
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/'
+  ],
+  moduleDirectories: [
+    'node_modules',
+    'src'
+  ]
 };
