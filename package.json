@@ -1,4 +1,4 @@
-{
+Read any reference documents, project overviews, assessments, TODO, readme, or similar files. Then begin work.{
   "name": "marketsage",
   "version": "1.0.0",
   "description": "MarketSage - Intelligent Chinese Marketplace Assistant",
@@ -17,7 +17,8 @@
     "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-redux": "^9.1.0"
+    "react-redux": "^9.1.0",
+    "@tensorflow/tfjs": "^3.20.0" // Added TensorFlow.js dependency
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

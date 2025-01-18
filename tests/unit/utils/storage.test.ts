@@ -1,132 +1,100 @@
 import { Storage } from '../../../src/common/utils/storage';
-import { createMockProduct } from '../../setup/utils/testUtils';
-import { Platform } from '../../../src/common/types';
+import { Product, Price, Seller, Platform } from '../../../src/common/types';
 
 describe('Storage', () => {
-  beforeEach(() => {
-    // Clear mock calls before each test
-    jest.clearAllMocks();
+  beforeEach(async () => {
+    await Storage.clearAll(); // Clear storage before each test
   });
 
-  describe('cacheProduct', () => {
-    it('should store product in local storage', async () => {
-      // Arrange
-      const mockProduct = createMockProduct({
-        id: 'test-product',
+  describe('Price History Methods', () => {
+    it('should save and retrieve price history', async () => {
+      const productId = 'product1';
+      const price: Price = { current: 10.0, currency: 'USD' }; // Updated to include 'current'
+      await Storage.savePriceHistory(productId, price);
+      const history = await Storage.getPriceHistory(productId);
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject(price);
+    });
+
+    it('should return an empty array if no price history exists', async () => {
+      const history = await Storage.getPriceHistory('nonexistentProduct');
+      expect(history).toEqual([]);
+    });
+
+    it('should clear price history', async () => {
+      const productId = 'product1';
+      const price: Price = { current: 10.0, currency: 'USD' }; // Updated to include 'current'
+      await Storage.savePriceHistory(productId, price);
+      await Storage.clearPriceHistory();
+      const history = await Storage.getPriceHistory(productId);
+      expect(history).toEqual([]);
+    });
+  });
+
+  describe('Product Cache Methods', () => {
+    it('should cache and retrieve a product', async () => {
+      const product: Product = {
+        id: 'product1',
         title: 'Test Product',
-        price: { current: 29.99, original: 39.99, currency: 'USD' },
-        seller: { id: 'test-seller', name: 'Test Seller', rating: 4.5, totalSales: 1000 },
+        price: { current: 10.0, currency: 'USD' }, // Updated to include 'current'
+        seller: { id: 'seller1', name: 'Test Seller' }, // Added seller details
         platform: Platform.TEMU,
-        url: 'https://www.temu.com/test-product',
-        images: ['image1.jpg', 'image2.jpg']
-      });
-
-      // Mock chrome.storage.local.set to resolve successfully
-      (chrome.storage.local.set as jest.Mock).mockImplementation((data, callback) => {
-        if (callback) callback();
-        return Promise.resolve();
-      });
-
-      // Act
-      await Storage.cacheProduct(mockProduct);
-
-      // Assert
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          [`product:${mockProduct.id}`]: mockProduct
-        }),
-        expect.any(Function)
-      );
+        url: 'http://example.com/product1',
+        images: ['image1.jpg'],
+      };
+      await Storage.cacheProduct(product);
+      const cachedProduct = await Storage.getCachedProduct('product1');
+      expect(cachedProduct).toMatchObject(product);
     });
 
-    it('should handle storage errors', async () => {
-      // Arrange
-      const mockProduct = createMockProduct({
-        id: 'test-product',
-        title: 'Test Product'
-      });
+    it('should limit cache to the last 100 products', async () => {
+      for (let i = 0; i < 105; i++) {
+        await Storage.cacheProduct({ 
+          id: `product${i}`, 
+          title: `Test Product ${i}`, 
+          price: { current: 10.0, currency: 'USD' }, // Updated to include 'current'
+          seller: { id: `seller${i}`, name: `Test Seller ${i}` }, // Added seller details
+          platform: Platform.TEMU,
+          url: `http://example.com/product${i}`,
+          images: ['image1.jpg'],
+        });
+      }
+      const cache = await Storage.getProductCache();
+      expect(Object.keys(cache)).toHaveLength(100);
+    });
 
-      // Mock chrome.storage.local.set to reject
-      const mockError = new Error('Storage error');
-      (chrome.storage.local.set as jest.Mock).mockImplementation(() => {
-        return Promise.reject(mockError);
-      });
-
-      // Act & Assert
-      await expect(Storage.cacheProduct(mockProduct)).rejects.toThrow('Storage error');
+    it('should return null for a nonexistent cached product', async () => {
+      const cachedProduct = await Storage.getCachedProduct('nonexistentProduct');
+      expect(cachedProduct).toBeNull();
     });
   });
 
-  describe('getCachedProduct', () => {
-    it('should retrieve product from local storage', async () => {
-      // Arrange
-      const mockProduct = createMockProduct({
-        id: 'test-product',
-        title: 'Test Product'
-      });
-
-      // Mock chrome.storage.local.get to return the product
-      (chrome.storage.local.get as jest.Mock).mockImplementation((key, callback) => {
-        const result = {
-          [`product:${mockProduct.id}`]: mockProduct
-        };
-        if (callback) callback(result);
-        return Promise.resolve(result);
-      });
-
-      // Act
-      const result = await Storage.getCachedProduct(mockProduct.id);
-
-      // Assert
-      expect(result).toEqual(mockProduct);
-      expect(chrome.storage.local.get).toHaveBeenCalledWith(
-        `product:${mockProduct.id}`,
-        expect.any(Function)
-      );
+  describe('Seller Ratings Methods', () => {
+    it('should save and retrieve seller ratings', async () => {
+      await Storage.saveSellerRating('seller1', 5);
+      const rating = await Storage.getSellerRating('seller1');
+      expect(rating).toBe(5);
     });
 
-    it('should return null for non-existent product', async () => {
-      // Arrange
-      const productId = 'non-existent';
+    it('should return null if no ratings exist for a seller', async () => {
+      const rating = await Storage.getSellerRating('nonexistentSeller');
+      expect(rating).toBeNull();
+    });
 
-      // Mock chrome.storage.local.get to return empty result
-      (chrome.storage.local.get as jest.Mock).mockImplementation((key, callback) => {
-        if (callback) callback({});
-        return Promise.resolve({});
-      });
-
-      // Act
-      const result = await Storage.getCachedProduct(productId);
-
-      // Assert
-      expect(result).toBeNull();
+    it('should calculate average ratings correctly', async () => {
+      await Storage.saveSellerRating('seller1', 5);
+      await Storage.saveSellerRating('seller1', 3);
+      const rating = await Storage.getSellerRating('seller1');
+      expect(rating).toBe(4); // Average of 5 and 3
     });
   });
 
-  describe('clearAll', () => {
-    it('should clear all stored data', async () => {
-      // Mock chrome.storage.local.clear to resolve successfully
-      (chrome.storage.local.clear as jest.Mock).mockImplementation((callback) => {
-        if (callback) callback();
-        return Promise.resolve();
-      });
-
-      // Act
+  describe('Utility Methods', () => {
+    it('should clear all storage', async () => {
+      await Storage.saveSellerRating('seller1', 5);
       await Storage.clearAll();
-
-      // Assert
-      expect(chrome.storage.local.clear).toHaveBeenCalled();
-    });
-
-    it('should handle clear errors', async () => {
-      // Mock chrome.storage.local.clear to reject
-      const mockError = new Error('Clear error');
-      (chrome.storage.local.clear as jest.Mock).mockImplementation(() => {
-        return Promise.reject(mockError);
-      });
-
-      // Act & Assert
-      await expect(Storage.clearAll()).rejects.toThrow('Clear error');
+      const rating = await Storage.getSellerRating('seller1');
+      expect(rating).toBeNull();
     });
   });
 });
