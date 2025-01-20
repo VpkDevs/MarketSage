@@ -1,0 +1,36 @@
+# Project Assessment
+
+## Task: Map project directory structure
+### Description:
+The project directory structure has been mapped to understand the organization of files and directories.
+
+### Findings:
+The project consists of a `development` directory containing both `backend` and `frontend` components, along with various configuration and documentation files.
+
+### Project Directory Structure:
+```
+/development
+    ├── mvp_structure.md
+    ├── project_structure.md
+    ├── testing_extensions.md
+    ├── testing_plan.md
+    ├── testing_strategy.md
+    ├── week1_tasks.md
+    ├── backend
+    │   ├── jest.config.js
+    │   ├── server.js
+    │   ├── routes
+    │   │   ├── scamDetection.js
+    │   │   └── sellerProfile.js
+    │   └── tests
+    │       ├── scamDetection.test.js
+    │       ├── sellerProfile.test.js
+    │       └── setup.js
+    └── frontend
+        ├── app.js
+        ├── index.html
+        └── styles.css
+```
+
+### Date and Time of Completion:
+[Insert current date and time here]
