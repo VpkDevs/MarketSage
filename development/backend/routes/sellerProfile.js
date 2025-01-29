@@ -16,22 +16,27 @@ const getSellerProfile = (sellerId) => {
 };
 
 router.get("/:sellerId", (req, res) => {
-  const { sellerId } = req.params;
+    try {
+        const { sellerId } = req.params;
 
-  // Validate sellerId
-  if (!sellerId || typeof sellerId !== "string") {
-    return res.status(400).json({ error: "Valid seller ID is required" });
-  }
+        // Validate sellerId
+        if (!sellerId || typeof sellerId !== "string") {
+            return res.status(400).json({ error: "Valid seller ID is required" });
+        }
 
-  // Simulate retrieval of seller profile
-  const sellerProfile = getSellerProfile(sellerId);
+        // Simulate retrieval of seller profile
+        const sellerProfile = getSellerProfile(sellerId);
 
-  // Check if seller profile exists (for simulation, we assume it always does)
-  if (!sellerProfile) {
-    return res.status(404).json({ error: "Seller profile not found" });
-  }
+        // Check if seller profile exists (for simulation, we assume it always does)
+        if (!sellerProfile) {
+            return res.status(404).json({ error: "Seller profile not found" });
+        }
 
-  res.json(sellerProfile);
+        res.json(sellerProfile);
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving seller profile', error: error.message });
+    }
 });
 
 module.exports = router;
+</create_file>
