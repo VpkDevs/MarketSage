@@ -1,15 +1,10 @@
-import { TensorFlowModel } from "some-tensorflow-library"; // Placeholder for actual import
+import * as tf from "@tensorflow/tfjs"; // Correct import for TensorFlow.js
 
 export class ScamDetectionModel {
-  private model: TensorFlowModel;
+  private model: any; // Using a generic type for the model temporarily
 
   constructor() {
     this.model = this.loadModel(); // Load the model
-  }
-
-  private loadModel(): TensorFlowModel {
-    // Logic to load the TensorFlow model
-    return new TensorFlowModel(); // Placeholder
   }
 
   async analyzeListingText(text: string): Promise<number> {
@@ -30,5 +25,10 @@ export class ScamDetectionModel {
   private async loadImages(images: string[]): Promise<any> {
     // Logic to load and preprocess images
     return images; // Placeholder
+  }
+
+  private async loadModel(): Promise<any> {
+    // Using any for the model temporarily
+    return await tf.loadLayersModel("path/to/model.json"); // Placeholder for actual model path
   }
 }
