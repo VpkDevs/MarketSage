@@ -1,155 +1,37 @@
-# Project Structure Mapping
+# Project Structure Overview
 
-## Directory Tree Diagram
+## Backend
 
-```
-/chinese-marketplace
-├── .gitignore
-├── chinese_marketplace_research.txt
-├── chinese-marketplace.code-workspace
-├── jest.config.js
-├── package-lock.json
-├── package.json
-├── Project_Overview_2.md
-├── project_progress.txt
-├── README.md
-├── requirements.txt
-├── TODO.md
-├── tsconfig.json
-├── webpack.config.js
-├── config/
-│   ├── webpack.common.js
-│   ├── webpack.dev.js
-│   └── webpack.prod.js
-├── coverage/
-├── development/
-│   ├── mvp_structure.md
-│   ├── project_structure.md
-│   ├── testing_extensions.md
-│   ├── testing_plan.md
-│   ├── testing_strategy.md
-│   └── week1_tasks.md
-│   ├── backend/
-│   │   ├── jest.config.js
-│   │   ├── server.js
-│   │   ├── routes/
-│   │   │   ├── scamDetection.js
-│   │   │   └── sellerProfile.js
-│   │   └── tests/
-│   │       ├── scamDetection.test.js
-│   │       ├── sellerProfile.test.js
-│   │       └── setup.js
-│   └── frontend/
-│       ├── app.js
-│       ├── index.html
-│       └── styles.css
-├── public/
-│   ├── popup.html
-│   ├── icons/
-│   └── styles/
-├── research/
-│   ├── README_updated.md
-│   ├── README.md
-│   ├── research_plan.md
-│   ├── task_division.md
-│   ├── unique_challenges.md
-│   ├── ai_queries/
-│   ├── competitors/
-│   │   └── research_plan.md
-│   ├── features/
-│   │   ├── implementation_roadmap.md
-│   │   └── innovative_features.md
-│   ├── findings/
-│   │   ├── comprehensive_analysis.md
-│   │   ├── key_opportunities.md
-│   │   ├── security_and_implementation.md
-│   │   └── user_experience_and_competition.md
-│   ├── market_research/
-│   │   ├── search_findings.md
-│   │   └── western_accessibility.md
-│   ├── platforms/
-│   │   ├── aliexpress.md
-│   │   ├── dhgate.md
-│   │   └── temu.md
-│   ├── search/
-│   │   └── term_mapping.md
-│   └── security/
-│       └── scam_detection.md
-│   └── technical/
-│       ├── phase1_features.md
-│       └── specifications.md
-│   └── vetted/
-│       └── analysis.md
-├── src/
-│   ├── manifest.json
-│   ├── background/
-│   │   ├── background.ts
-│   │   ├── components/
-│   │   ├── services/
-│   │   │   ├── serviceManager.ts
-│   │   │   ├── insight/
-│   │   │   │   └── priceAnalyzer.ts
-│   │   │   └── protect/
-│   │   │       ├── aiDetector.ts
-│   │   │       └── securityAnalyzer.ts
-│   │   ├── types/
-│   │   └── utils/
-│   ├── common/
-│   │   ├── components/
-│   │   ├── services/
-│   │   ├── types/
-│   │   │   └── index.ts
-│   │   └── utils/
-│   │       ├── dataProcessing.ts
-│   │       └── storage.ts
-│   ├── content/
-│   │   ├── components/
-│   │   └── services/
-│   │       ├── platformDetector.ts
-│   │       ├── priceExtractor.ts
-│   │       └── productExtractor.ts
-│   │   └── types/
-│   │   └── utils/
-│   ├── popup/
-│   │   ├── index.tsx
-│   │   ├── components/
-│   │   │   ├── App.tsx
-│   │   │   ├── insight/
-│   │   │   │   └── InsightSection.tsx
-│   │   │   └── protect/
-│   │   │       └── ProtectSection.tsx
-│   │   │   └── scout/
-│   │   │       └── ScoutSection.tsx
-│   │   ├── services/
-│   │   ├── store/
-│   │   │   └── rootReducer.ts
-│   │   ├── styles/
-│   │   │   └── App.module.css
-│   │   ├── types/
-│   │   └── utils/
-│   └── types/
-│       └── css.d.ts
-└── tests/
-    ├── setup.ts
-    ├── e2e/
-    ├── integration/
-    ├── setup/
-    ├── setup/environment.d.ts
-    ├── setup/mocks/
-    ├── setup/mocks/chrome.ts
-    ├── setup/mocks/types.ts
-    ├── setup/utils/
-    ├── setup/utils/reactTestUtils.tsx
-    ├── setup/utils/testUtils.ts
-    ├── unit/
-    │   ├── components/
-    │   │   └── ProtectSection.test.tsx
-    │   ├── services/
-    │   │   ├── platformDetector.test.ts
-    │   │   ├── priceExtractor.test.ts
-    │   │   ├── productExtractor.test.ts
-    │   │   └── securityAnalyzer.test.ts
-    │   └── utils/
-    │       ├── dataProcessing.test.ts
-    │       └── storage.test.ts
-```
+- **server.js**: Sets up the Express server, applies middleware, and defines routes.
+- **routes/scamDetection.js**: Handles scam detection requests by analyzing text for scam keywords.
+- **routes/sellerProfile.js**: Retrieves seller profiles based on seller ID.
+
+## Frontend
+
+- **app.js**: Manages event listeners for scam detection and seller profile analysis, interacts with backend APIs.
+
+## Documentation
+
+- **README.md**: Provides project overview, setup instructions, and contribution guidelines.
+
+## Key Features
+
+- **AI-Powered Scam Detection**: Analyzes text for scam keywords and calculates scam probability.
+- **Seller DNA Profiling**: Retrieves and displays seller profiles based on seller ID.
+
+## Areas for Improvement
+
+- **Code Quality**: Adhere to SOLID principles and PEP-8 guidelines.
+- **Error Handling**: Implement robust error handling and logging mechanisms.
+- **Security**: Enhance input validation and secure authentication protocols.
+- **Performance**: Optimize algorithms and database queries, implement caching mechanisms.
+- **Documentation**: Update README.md with detailed project goals and setup instructions.
+
+## Next Steps
+
+1. **Update Documentation**: Enhance README.md with project goals, setup instructions, and contribution guidelines.
+2. **Implement Error Handling**: Add try-catch blocks and logging mechanisms.
+3. **Enhance Security**: Sanitize inputs and implement secure authentication protocols.
+4. **Optimize Performance**: Refactor inefficient code and optimize database queries.
+5. **Set Up CI/CD Pipelines**: Automate testing, deployment, and linting using GitHub Actions or similar tools.
+6. **Automated Testing**: Integrate unit tests, integration tests, and end-to-end tests using appropriate frameworks.

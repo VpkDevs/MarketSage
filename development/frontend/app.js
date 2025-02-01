@@ -1,4 +1,5 @@
-// Event listener for the analyze button
+document.addEventListener("DOMContentLoaded", () => {
+    // Event listener for the analyze button
 document
   .getElementById("analyze-button")
   .addEventListener("click", async () => {
@@ -11,7 +12,7 @@ document
       return;
     }
 
-    // Call the backend API for scam detection
+    // Input validation
     const response = await fetch("/api/scamDetection", {
       method: "POST",
       headers: {
@@ -22,7 +23,8 @@ document
 
     const result = await response.json();
 
-    // Error handling
+    // Log the incoming request
+    console.log(`Analyzing text: ${text}`);
     if (!response.ok) {
       resultDiv.innerText = `Error: ${result.error}`;
       return;
@@ -45,10 +47,12 @@ document
     }
 
     // Call the backend API for seller profile
+    console.log(`Fetching profile for seller ID: ${sellerId}`);
     const response = await fetch(`/api/sellerProfile/${sellerId}`);
     const profile = await response.json();
 
-    // Error handling
+    // Log the response
+    console.log(`Seller profile retrieved: ${JSON.stringify(profile)}`);
     if (!response.ok) {
       profileResultDiv.innerText = `Error: ${profile.error}`;
       return;

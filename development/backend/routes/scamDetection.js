@@ -14,7 +14,7 @@ const scamKeywords = [
   "risk",
 ];
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
     try {
         const { text } = req.body;
 
@@ -27,6 +27,9 @@ router.post("/", (req, res) => {
             return res.status(400).json({ error: "Text is required" });
         }
 
+        // Log the incoming request
+        console.log(`Received request to analyze text: ${text}`);
+
         // Calculate scam probability based on keyword analysis
         const keywordMatches = scamKeywords.filter((keyword) =>
             text.toLowerCase().includes(keyword)
@@ -34,6 +37,9 @@ router.post("/", (req, res) => {
         const scamProbability = Math.min(1, keywordMatches / scamKeywords.length); // Normalize to a value between 0 and 1
 
         res.json({ scamProbability });
+
+        // Log the response
+        console.log(`Scam probability calculated: ${scamProbability}`);
     } catch (error) {
         res.status(500).json({ message: 'Error processing request', error: error.message });
     }

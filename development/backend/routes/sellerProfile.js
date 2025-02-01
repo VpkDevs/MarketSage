@@ -15,9 +15,12 @@ const getSellerProfile = (sellerId) => {
   };
 };
 
-router.get("/:sellerId", (req, res) => {
+router.get("/:sellerId", async (req, res) => {
     try {
         const { sellerId } = req.params;
+
+        // Log the incoming request
+        console.log(`Received request for seller profile: ${sellerId}`);
 
         // Validate sellerId
         if (!sellerId || typeof sellerId !== "string") {
@@ -33,6 +36,9 @@ router.get("/:sellerId", (req, res) => {
         }
 
         res.json(sellerProfile);
+
+        // Log the response
+        console.log(`Seller profile retrieved: ${JSON.stringify(sellerProfile)}`);
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving seller profile', error: error.message });
     }
