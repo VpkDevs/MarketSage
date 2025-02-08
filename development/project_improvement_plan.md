@@ -16,7 +16,7 @@ This document outlines a comprehensive, modular, and iterative plan to enhance t
 - **Task:** Review all major files and identify strengths, weaknesses, and areas for improvement.
 - **Actions:**
   - Audit existing architecture, modules, and dependencies.
-  - Identify non-compliant code with respect to SOLID and PEP-8.
+  - Identify non-compliant code with respect to SOLID and PEP-8.Evaluate and comprehend this project thoroughly. Then, present it to me in natural language as if you're pitching it, ensuring you include all features in your pitch.
   - Document findings in a comprehensive project overview.
 
 ### 2. Documentation Updates
