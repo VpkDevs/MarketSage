@@ -51,4 +51,11 @@ Your Intelligent Marketplace Guide - A smart shopping assistant for Chinese mark
 3. Make your changes and commit them with clear messages.
 4. Push your branch and create a pull request.
 
+## Additional Tasks
+
+- Update .gitignore to exclude unnecessary files.
+- Verify and update requirements.txt.
+- Create a virtual environment if none exists.
+- Document setup process in README.md.
+
 This file should be kept up-to-date with major changes and feature implementations to ensure it accurately reflects the current state of the project.
