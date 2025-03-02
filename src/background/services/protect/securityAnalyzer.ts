@@ -1,5 +1,5 @@
-import { Storage } from '../../../common/utils/storage';
-import { Product } from '../../../common/types';
+import { Storage } from "../../../common/utils/storage";
+import { Product } from "../../../common/types";
 
 export interface SecurityMetrics {
   riskScore: number;
@@ -11,21 +11,31 @@ export class SecurityAnalyzer {
   private static readonly RISK_WEIGHTS = {
     SELLER_HISTORY: 0.4,
     PRICE_ANOMALY: 0.3,
-    LISTING_QUALITY: 0.3
+    LISTING_QUALITY: 0.3,
+    TEXT_SCAM_KEYWORDS: 0.3,
   };
 
+  private static readonly SCAM_KEYWORDS = [
+    "scam",
+    "fraud",
+    "fake",
+    "offer",
+    "money",
+    "guarantee",
+    "win",
+    "prize",
+    "urgent",
+    "risk",
+  ];
+
   async analyzeProduct(product: Product): Promise<SecurityMetrics> {
-    const [
-      sellerTrustScore,
-      priceRiskScore,
-      listingRiskScore,
-      warnings
-    ] = await Promise.all([
-      this.calculateSellerTrust(product.seller.id),
-      this.analyzePriceRisk(product),
-      this.analyzeListingQuality(product),
-      this.generateWarnings(product)
-    ]);
+    const [sellerTrustScore, priceRiskScore, listingRiskScore, warnings] =
+      await Promise.all([
+        this.calculateSellerTrust(product.seller.id),
+        this.analyzePriceRisk(product),
+        this.analyzeListingQuality(product),
+        this.generateWarnings(product),
+      ]);
 
     const riskScore = this.calculateOverallRisk(
       sellerTrustScore,
@@ -36,7 +46,7 @@ export class SecurityAnalyzer {
     return {
       riskScore: Math.round(riskScore * 100), // Convert to 0-100 scale
       warnings,
-      sellerTrust: Math.round(sellerTrustScore * 100)
+      sellerTrust: Math.round(sellerTrustScore * 100),
     };
   }
 
@@ -51,10 +61,10 @@ export class SecurityAnalyzer {
   private async analyzePriceRisk(product: Product): Promise<number> {
     const priceHistory = await Storage.getPriceHistory(product.id);
     const cache = await Storage.getProductCache();
-    
+
     // Check for price anomalies
     if (priceHistory.length > 0) {
-      const prices = priceHistory.map(p => p.current);
+      const prices = priceHistory.map((p) => p.current);
       const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
       const stdDev = Math.sqrt(
         prices.reduce((sq, n) => sq + Math.pow(n - avg, 2), 0) / prices.length
@@ -70,25 +80,39 @@ export class SecurityAnalyzer {
 
   private async analyzeListingQuality(product: Product): Promise<number> {
     let riskFactors = 0;
-    let totalFactors = 4;
+    let totalFactors = 5; // Increased total factors to include text scam keywords
 
     // Check for complete product information
     if (!product.description || product.description.length < 50) riskFactors++;
     if (!product.images || product.images.length === 0) riskFactors++;
     if (!product.title || product.title.length < 10) riskFactors++;
-    
+
     // Check for suspicious patterns in text
     const suspiciousPatterns = [
       /too good to be true/i,
       /limited time only/i,
       /act now/i,
-      /clearance sale/i
+      /clearance sale/i,
     ];
 
     const text = `${product.title} ${product.description}`.toLowerCase();
-    if (suspiciousPatterns.some(pattern => pattern.test(text))) riskFactors++;
+    if (suspiciousPatterns.some((pattern) => pattern.test(text))) riskFactors++;
 
-    return riskFactors / totalFactors;
+    let textScamKeywordsRisk = this.analyzeTextForScamKeywords(text);
+
+    return (riskFactors + textScamKeywordsRisk) / totalFactors;
+  }
+
+  private analyzeTextForScamKeywords(text: string): number {
+    let scamKeywordRiskFactor = 0;
+    const scamKeywordMatches = SecurityAnalyzer.SCAM_KEYWORDS.filter(
+      (keyword) => text.includes(keyword)
+    ).length;
+    scamKeywordRiskFactor = Math.min(
+      1,
+      scamKeywordMatches / SecurityAnalyzer.SCAM_KEYWORDS.length
+    );
+    return scamKeywordRiskFactor;
   }
 
   private calculateOverallRisk(
@@ -109,26 +133,28 @@ export class SecurityAnalyzer {
     // Seller warnings
     const sellerRating = await Storage.getSellerRating(product.seller.id);
     if (!sellerRating) {
-      warnings.push('New seller with no rating history');
+      warnings.push("New seller with no rating history");
     } else if (sellerRating < 4.0) {
-      warnings.push('Seller has below average ratings');
+      warnings.push("Seller has below average ratings");
     }
 
     // Price warnings
     const priceHistory = await Storage.getPriceHistory(product.id);
     if (priceHistory.length > 0) {
-      const avgPrice = priceHistory.reduce((sum, p) => sum + p.current, 0) / priceHistory.length;
+      const avgPrice =
+        priceHistory.reduce((sum, p) => sum + p.current, 0) /
+        priceHistory.length;
       if (product.price.current < avgPrice * 0.5) {
-        warnings.push('Price is suspiciously low compared to history');
+        warnings.push("Price is suspiciously low compared to history");
       }
     }
 
     // Listing quality warnings
     if (!product.description || product.description.length < 50) {
-      warnings.push('Limited product description');
+      warnings.push("Limited product description");
     }
     if (!product.images || product.images.length === 0) {
-      warnings.push('No product images available');
+      warnings.push("No product images available");
     }
 
     return warnings;
