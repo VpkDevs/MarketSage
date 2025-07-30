@@ -1,4 +1,7 @@
-import { serviceManager } from './services/serviceManager';
+import { ServiceManager } from './services/serviceManager';
+
+// Get the singleton instance
+const serviceManager = ServiceManager.getInstance();
 
 // Initialize extension when installed or updated
 chrome.runtime.onInstalled.addListener(async (details) => {

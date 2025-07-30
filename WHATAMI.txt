@@ -1,0 +1,27 @@
+# WHAT AM I?
+
+**Project Name:** Market Oracle
+**Original Name:** market-sage
+
+## Purpose
+AI-powered market analysis and investment insights platform
+
+## Category/Space
+Financial Analytics
+
+## Positioning
+Innovative solution in the financial analytics market.
+
+## Target Market
+- Financial Analytics professionals and enthusiasts
+- Users seeking advanced automation and intelligence
+- Businesses looking for specialized solutions
+
+## Competitors
+Bloomberg Terminal, TradingView, Yahoo Finance
+
+## Tech Stack
+Financial analytics platform
+
+## Status
+Active development

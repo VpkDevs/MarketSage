@@ -22,32 +22,14 @@ export class PriceAnalyzer {
   };
 
   async analyzePrices(product: Product): Promise<PriceAnalytics> {
-    const [priceHistory, marketData] = await Promise.all([
-      this.getPriceHistory(product.id),
-      this.getMarketData(product)
-    ]);
-
-    const currentPrice = product.price.current;
-    const marketAverage = await this.calculateMarketAverage(product);
-    const valueScore = this.calculateValueScore(currentPrice, marketAverage, product);
-    const trend = this.analyzePriceTrend(priceHistory);
-    const recommendations = this.generateRecommendations(
-      currentPrice,
-      marketAverage,
-      valueScore,
-      trend
-    );
-
+    const historicalData = await Storage.getPriceHistory(product.id);
+    const marketComparison = await this.getMarketComparison(product);
+    
     return {
-      currentPrice,
-      marketAverage,
-      priceHistory: priceHistory.map(entry => ({
-        price: entry.current,
-        timestamp: entry.timestamp
-      })),
-      valueScore: Math.round(valueScore * 100),
-      trend,
-      recommendations
+      anomalyScore: this.calculateAnomalyScore(product.price, historicalData),
+      marketPosition: this.calculateMarketPosition(product.price, marketComparison),
+      priceHistory: historicalData,
+      recommendations: this.generatePriceRecommendations(product, marketComparison)
     };
   }
 

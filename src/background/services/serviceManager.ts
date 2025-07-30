@@ -5,15 +5,26 @@ import { Storage } from '../../common/utils/storage';
 import { Product } from '../../common/types';
 
 export class ServiceManager {
+  private static instance: ServiceManager;
   private securityAnalyzer: SecurityAnalyzer;
   private priceAnalyzer: PriceAnalyzer;
   private productExtractor: ProductExtractor;
 
-  constructor() {
+  private constructor() {
     this.securityAnalyzer = new SecurityAnalyzer();
     this.priceAnalyzer = new PriceAnalyzer();
     this.productExtractor = new ProductExtractor();
     this.initializeMessageListeners();
+  }
+
+  /**
+   * Get the singleton instance of ServiceManager
+   */
+  static getInstance(): ServiceManager {
+    if (!ServiceManager.instance) {
+      ServiceManager.instance = new ServiceManager();
+    }
+    return ServiceManager.instance;
   }
 
   private initializeMessageListeners(): void {

@@ -1,5 +1,6 @@
 import { Storage } from "../../../common/utils/storage";
 import { Product } from "../../../common/types";
+import { ScamDetectionModel } from "../../../common/models/scamDetectionModel";
 
 export interface SecurityMetrics {
   riskScore: number;
@@ -28,25 +29,34 @@ export class SecurityAnalyzer {
     "risk",
   ];
 
+  private scamDetector: ScamDetectionModel;
+
+  constructor() {
+    this.scamDetector = new ScamDetectionModel();
+  }
+
   async analyzeProduct(product: Product): Promise<SecurityMetrics> {
-    const [sellerTrustScore, priceRiskScore, listingRiskScore, warnings] =
-      await Promise.all([
-        this.calculateSellerTrust(product.seller.id),
-        this.analyzePriceRisk(product),
-        this.analyzeListingQuality(product),
-        this.generateWarnings(product),
-      ]);
+    const [scamAnalysis, sellerTrust, priceRisk] = await Promise.all([
+      this.scamDetector.analyze({
+        title: product.title,
+        description: product.description,
+        price: product.price.current,
+        marketPrice: product.price.market
+      }),
+      this.calculateSellerTrust(product.seller.id),
+      this.analyzePriceRisk(product)
+    ]);
 
     const riskScore = this.calculateOverallRisk(
-      sellerTrustScore,
-      priceRiskScore,
-      listingRiskScore
+      scamAnalysis.probability,
+      sellerTrust,
+      priceRisk
     );
 
     return {
-      riskScore: Math.round(riskScore * 100), // Convert to 0-100 scale
-      warnings,
-      sellerTrust: Math.round(sellerTrustScore * 100),
+      riskScore: Math.round(riskScore * 100),
+      warnings: [...scamAnalysis.riskFactors],
+      sellerTrust: Math.round(sellerTrust * 100)
     };
   }
 

@@ -1,4 +1,4 @@
-Read any reference documents, project overviews, assessments, TODO, readme, or similar files. Then begin work.{
+{
   "name": "marketsage",
   "version": "1.0.0",
   "description": "MarketSage - Intelligent Chinese Marketplace Assistant",
@@ -8,17 +8,29 @@ Read any reference documents, project overviews, assessments, TODO, readme, or s
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:ui": "jest tests/ui",
+    "test:e2e": "jest tests/e2e",
     "lint": "eslint 'src/**/*.{js,ts,tsx}'",
-    "format": "prettier --write 'src/**/*.{js,ts,tsx}'"
+    "format": "prettier --write 'src/**/*.{js,ts,tsx}'",
+    "verify": "node scripts/verify-build.js",
+    "prebuild": "npm run verify"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.1.0",
+    "@tensorflow/tfjs": "^3.20.0",
     "axios": "^1.6.5",
+    "chart.js": "^4.4.0",
+    "crypto-js": "^4.2.0",
+    "date-fns": "^2.30.0",
+    "fuse.js": "^7.0.0",
     "lodash": "^4.17.21",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.3.1",
     "react-redux": "^9.1.0",
-    "@tensorflow/tfjs": "^3.20.0" // Added TensorFlow.js dependency
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
@@ -28,8 +40,8 @@ Read any reference documents, project overviews, assessments, TODO, readme, or s
     "@types/jest": "^29.5.14",
     "@types/jsdom": "^21.1.6",
     "@types/lodash": "^4.14.202",
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18",
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
