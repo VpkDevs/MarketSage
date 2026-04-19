@@ -16,7 +16,24 @@ jest.mock('../src/common/utils/storage', () => {
     getCurrentUser: jest.fn(),
     getCategories: jest.fn(),
     getProductsByCategory: jest.fn(),
-    clearAll: jest.fn()
+    clearAll: jest.fn(),
+    // Temporal analyzer
+    getTemporalSellerData: jest.fn().mockResolvedValue(null),
+    saveTemporalSellerData: jest.fn().mockResolvedValue(undefined),
+    // Cross-listing engine
+    getCrossListingFingerprints: jest.fn().mockResolvedValue([]),
+    saveCrossListingFingerprint: jest.fn().mockResolvedValue(undefined),
+    // Image hash registry
+    getImageHashRegistry: jest.fn().mockResolvedValue({}),
+    saveImageHashEntry: jest.fn().mockResolvedValue(undefined),
+    // Feedback engine
+    getFeedbackEntries: jest.fn().mockResolvedValue([]),
+    saveFeedbackEntry: jest.fn().mockResolvedValue(undefined),
+    getFeedbackWeights: jest.fn().mockResolvedValue({}),
+    saveFeedbackWeights: jest.fn().mockResolvedValue(undefined),
+    // Threat intelligence
+    getBlacklistedSellers: jest.fn().mockResolvedValue([]),
+    getSuspiciousPatterns: jest.fn().mockResolvedValue([]),
   };
   
   return {

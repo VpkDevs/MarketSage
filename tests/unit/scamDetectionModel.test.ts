@@ -75,6 +75,98 @@ jest.mock('../../src/common/models/scamDetection/reviewAnalyzer', () => {
   };
 });
 
+// Mock the new engines
+jest.mock('../../src/common/models/scamDetection/InteractionEngine', () => {
+  return {
+    InteractionEngine: jest.fn().mockImplementation(() => ({
+      apply: jest.fn().mockReturnValue({
+        adjustedScores: {},
+        triggeredRules: [],
+        amplificationApplied: false,
+      }),
+      computeProbability: jest.fn().mockImplementation(
+        (_adjustedScores: any, results: any[], _triggeredRules: any[], globalThreshold: number) => {
+          const enabled = results.filter((r: any) => r.enabled);
+          if (enabled.length === 0) return 0;
+          let weightedSum = 0;
+          let totalWeight = 0;
+          for (const r of enabled) {
+            weightedSum += r.score * r.weight;
+            totalWeight += r.weight;
+          }
+          const prob = totalWeight > 0 ? weightedSum / totalWeight : 0;
+          return Math.min(1, prob * (globalThreshold / 70));
+        }
+      ),
+    })),
+    INTERACTION_RULES: [],
+  };
+});
+
+jest.mock('../../src/common/models/scamDetection/TemporalAnalyzer', () => {
+  return {
+    TemporalAnalyzer: jest.fn().mockImplementation(() => ({
+      analyze: jest.fn().mockResolvedValue({
+        signals: [],
+        riskScore: 0,
+        hasTemporalData: false,
+      }),
+      recordSnapshot: jest.fn().mockResolvedValue(undefined),
+    })),
+  };
+});
+
+jest.mock('../../src/common/models/scamDetection/CrossListingEngine', () => {
+  return {
+    CrossListingEngine: jest.fn().mockImplementation(() => ({
+      analyze: jest.fn().mockResolvedValue({ matches: [], riskScore: 0, issues: [] }),
+      registerProduct: jest.fn().mockResolvedValue({}),
+    })),
+  };
+});
+
+jest.mock('../../src/common/models/scamDetection/FeedbackEngine', () => {
+  return {
+    FeedbackEngine: jest.fn().mockImplementation(() => ({
+      getAdjustedWeight: jest.fn().mockImplementation(
+        (_id: string, defaultWeight: number) => Promise.resolve(defaultWeight)
+      ),
+      submitFeedback: jest.fn().mockResolvedValue({ entry: {}, weightAdjustments: [] }),
+    })),
+  };
+});
+
+jest.mock('../../src/common/models/scamDetection/ConfidenceCalculator', () => {
+  return {
+    ConfidenceCalculator: jest.fn().mockImplementation(() => ({
+      compute: jest.fn().mockReturnValue({
+        level: 'medium',
+        score: 0.6,
+        factors: {
+          dataCompleteness: 0.6,
+          signalAgreement: 0.6,
+          historicalDataAvailability: 0.5,
+          sampleSize: 0.5,
+        },
+      }),
+    })),
+  };
+});
+
+jest.mock('../../src/common/models/scamDetection/ExplanationEngine', () => {
+  return {
+    ExplanationEngine: jest.fn().mockImplementation(() => ({
+      generate: jest.fn().mockReturnValue({
+        summary: 'Test summary',
+        topSignals: [],
+        triggeredRules: [],
+        keyAnomalies: [],
+        humanReadable: 'Test explanation',
+      }),
+    })),
+  };
+});
+
 // Mock the preferences
 jest.mock('../../src/common/models/scamDetection/userPreferences', () => {
   const originalModule = jest.requireActual('../../src/common/models/scamDetection/userPreferences');

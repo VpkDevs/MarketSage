@@ -1,5 +1,11 @@
 import { Product, Price } from '../types';
 import { UserScamDetectionPreferences } from '../models/scamDetection/userPreferences';
+import {
+  TemporalSellerData,
+  ProductFingerprint,
+  ImageHashEntry,
+  FeedbackEntry,
+} from '../types/scamDetection';
 
 export class Storage {
   private static readonly PRICE_HISTORY_KEY = 'price_history';
@@ -10,6 +16,13 @@ export class Storage {
   private static readonly CHECKOUT_SESSION_KEY = 'checkout_session';
   private static readonly CATEGORIES_KEY = 'categories';
   private static readonly CURRENT_USER_KEY = 'current_user';
+  private static readonly TEMPORAL_SELLER_KEY = 'temporal_seller';
+  private static readonly CROSS_LISTING_KEY = 'cross_listing';
+  private static readonly IMAGE_HASH_REGISTRY_KEY = 'image_hash_registry';
+  private static readonly FEEDBACK_KEY = 'fraud_feedback';
+  private static readonly FEEDBACK_WEIGHTS_KEY = 'fraud_feedback_weights';
+  private static readonly BLACKLISTED_SELLERS_KEY = 'blacklisted_sellers';
+  private static readonly SUSPICIOUS_PATTERNS_KEY = 'suspicious_patterns';
 
   // Price History Methods
   static async savePriceHistory(productId: string, price: Price): Promise<void> {
@@ -170,5 +183,91 @@ export class Storage {
   private static async getAllKeys(): Promise<string[]> {
     const storage = await chrome.storage.local.get(null);
     return Object.keys(storage);
+  }
+
+  // ── Temporal Seller Data ──────────────────────────────────────────────────
+
+  static async getTemporalSellerData(sellerId: string): Promise<TemporalSellerData | null> {
+    const result = await chrome.storage.local.get(`${this.TEMPORAL_SELLER_KEY}_${sellerId}`);
+    return result[`${this.TEMPORAL_SELLER_KEY}_${sellerId}`] || null;
+  }
+
+  static async saveTemporalSellerData(data: TemporalSellerData): Promise<void> {
+    await chrome.storage.local.set({
+      [`${this.TEMPORAL_SELLER_KEY}_${data.sellerId}`]: data
+    });
+  }
+
+  // ── Cross-Listing Fingerprint Data ────────────────────────────────────────
+
+  static async getCrossListingFingerprints(): Promise<ProductFingerprint[]> {
+    const result = await chrome.storage.local.get(this.CROSS_LISTING_KEY);
+    return result[this.CROSS_LISTING_KEY] || [];
+  }
+
+  static async saveCrossListingFingerprint(fingerprint: ProductFingerprint): Promise<void> {
+    const existing = await this.getCrossListingFingerprints();
+    // Replace existing entry for same product+platform, or append
+    const idx = existing.findIndex(
+      f => f.productId === fingerprint.productId && f.platform === fingerprint.platform
+    );
+    if (idx >= 0) {
+      existing[idx] = fingerprint;
+    } else {
+      existing.push(fingerprint);
+    }
+    // Keep most recent 500 entries to avoid unbounded growth
+    const trimmed = existing.sort((a, b) => b.timestamp - a.timestamp).slice(0, 500);
+    await chrome.storage.local.set({ [this.CROSS_LISTING_KEY]: trimmed });
+  }
+
+  // ── Image Hash Registry ───────────────────────────────────────────────────
+
+  static async getImageHashRegistry(): Promise<Record<string, ImageHashEntry>> {
+    const result = await chrome.storage.local.get(this.IMAGE_HASH_REGISTRY_KEY);
+    return result[this.IMAGE_HASH_REGISTRY_KEY] || {};
+  }
+
+  static async saveImageHashEntry(entry: ImageHashEntry): Promise<void> {
+    const registry = await this.getImageHashRegistry();
+    registry[entry.hash] = entry;
+    await chrome.storage.local.set({ [this.IMAGE_HASH_REGISTRY_KEY]: registry });
+  }
+
+  // ── Feedback ──────────────────────────────────────────────────────────────
+
+  static async getFeedbackEntries(productId?: string): Promise<FeedbackEntry[]> {
+    const result = await chrome.storage.local.get(this.FEEDBACK_KEY);
+    const all: FeedbackEntry[] = result[this.FEEDBACK_KEY] || [];
+    return productId ? all.filter(e => e.productId === productId) : all;
+  }
+
+  static async saveFeedbackEntry(entry: FeedbackEntry): Promise<void> {
+    const existing = await this.getFeedbackEntries();
+    existing.push(entry);
+    // Keep most recent 1000 feedback entries
+    const trimmed = existing.sort((a, b) => b.timestamp - a.timestamp).slice(0, 1000);
+    await chrome.storage.local.set({ [this.FEEDBACK_KEY]: trimmed });
+  }
+
+  static async getFeedbackWeights(): Promise<Record<string, number>> {
+    const result = await chrome.storage.local.get(this.FEEDBACK_WEIGHTS_KEY);
+    return result[this.FEEDBACK_WEIGHTS_KEY] || {};
+  }
+
+  static async saveFeedbackWeights(weights: Record<string, number>): Promise<void> {
+    await chrome.storage.local.set({ [this.FEEDBACK_WEIGHTS_KEY]: weights });
+  }
+
+  // ── Threat Intelligence (used by AdvancedThreatDetection) ────────────────
+
+  static async getBlacklistedSellers(): Promise<string[]> {
+    const result = await chrome.storage.local.get(this.BLACKLISTED_SELLERS_KEY);
+    return result[this.BLACKLISTED_SELLERS_KEY] || [];
+  }
+
+  static async getSuspiciousPatterns(): Promise<any[]> {
+    const result = await chrome.storage.local.get(this.SUSPICIOUS_PATTERNS_KEY);
+    return result[this.SUSPICIOUS_PATTERNS_KEY] || [];
   }
 }

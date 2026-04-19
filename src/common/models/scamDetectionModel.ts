@@ -1,15 +1,20 @@
 import { ScamDetectionPreferences } from "./scamDetection/userPreferences";
-import { Product, ScamHeuristic, ScamAnalysisResult, Platform } from "../types";
+import { Product, ScamHeuristic, ScamAnalysisResult, HeuristicResult, Platform } from "../types";
 
-// Import the detection engines
-// Note: These would need to be implemented separately
+// Detection engines
 import { AnomalyDetectionEngine } from "./scamDetection/anomalyDetection";
 import { ImageAnalysisEngine } from "./scamDetection/imageAnalysis";
 import { SellerAnalysisEngine } from "./scamDetection/sellerAnalysis";
 import { CrossPlatformVerifier } from "./scamDetection/crossPlatformVerifier";
 import { ReviewAnalyzer } from "./scamDetection/reviewAnalyzer";
 
-// ScamAnalysisResult is now imported from ../types
+// New engines
+import { InteractionEngine } from "./scamDetection/InteractionEngine";
+import { TemporalAnalyzer } from "./scamDetection/TemporalAnalyzer";
+import { CrossListingEngine } from "./scamDetection/CrossListingEngine";
+import { FeedbackEngine } from "./scamDetection/FeedbackEngine";
+import { ConfidenceCalculator } from "./scamDetection/ConfidenceCalculator";
+import { ExplanationEngine } from "./scamDetection/ExplanationEngine";
 
 export class ScamDetectionModel {
   private anomalyDetector: AnomalyDetectionEngine;
@@ -19,6 +24,14 @@ export class ScamDetectionModel {
   private reviewAnalyzer: ReviewAnalyzer;
   private preferences: ScamDetectionPreferences;
 
+  // New engines
+  private interactionEngine: InteractionEngine;
+  private temporalAnalyzer: TemporalAnalyzer;
+  private crossListingEngine: CrossListingEngine;
+  private feedbackEngine: FeedbackEngine;
+  private confidenceCalculator: ConfidenceCalculator;
+  private explanationEngine: ExplanationEngine;
+
   constructor() {
     this.anomalyDetector = new AnomalyDetectionEngine();
     this.imageAnalyzer = new ImageAnalysisEngine();
@@ -26,6 +39,13 @@ export class ScamDetectionModel {
     this.crossPlatformVerifier = new CrossPlatformVerifier();
     this.reviewAnalyzer = new ReviewAnalyzer();
     this.preferences = ScamDetectionPreferences.getInstance();
+
+    this.interactionEngine = new InteractionEngine();
+    this.temporalAnalyzer = new TemporalAnalyzer();
+    this.crossListingEngine = new CrossListingEngine();
+    this.feedbackEngine = new FeedbackEngine();
+    this.confidenceCalculator = new ConfidenceCalculator();
+    this.explanationEngine = new ExplanationEngine();
   }
 
   async analyze(data: {
@@ -36,37 +56,89 @@ export class ScamDetectionModel {
     images?: string[];
     sellerId?: string;
     categoryId?: string;
-    userId?: string; // User ID for preferences
+    userId?: string;
   }): Promise<ScamAnalysisResult> {
-    // Get user preferences (or default if userId not provided)
     const userId = data.userId || 'default';
     const userPrefs = await this.preferences.getUserPreferences(userId);
 
-    // Prepare product data for analysis
     const product: Product = this.prepareProductData(data);
 
-    // Run all enabled detection engines in parallel
-    const detailedResults = await this.runEnabledHeuristics(product, userPrefs.heuristics);
+    // ── Step 1: Run base heuristics in parallel ─────────────────────────────
+    const baseResults = await this.runEnabledHeuristics(product, userPrefs.heuristics);
 
-    // Calculate overall probability based on weighted scores
-    const { probability, riskFactors } = this.calculateOverallProbability(
-      detailedResults,
+    // Apply feedback-adjusted weights to each result
+    const adjustedResults = await this.applyFeedbackWeights(baseResults);
+
+    // ── Step 2: Run temporal analysis ──────────────────────────────────────
+    const temporalResult = product.seller?.id
+      ? await this.temporalAnalyzer.analyze(product.seller.id)
+      : { signals: [], riskScore: 0, hasTemporalData: false };
+
+    // ── Step 3: Apply interaction engine (non-linear scoring) ───────────────
+    const interactionResult = this.interactionEngine.apply(adjustedResults);
+
+    // ── Step 4: Compute final probability ──────────────────────────────────
+    const probability = this.interactionEngine.computeProbability(
+      interactionResult.adjustedScores,
+      adjustedResults,
+      interactionResult.triggeredRules,
       userPrefs.globalThreshold
     );
 
-    // Determine overall risk level
+    // ── Step 5: Determine risk level ────────────────────────────────────────
     const overallRiskLevel = this.determineRiskLevel(probability);
+
+    // ── Step 6: Collect risk factors (human-readable findings) ──────────────
+    const riskFactors = adjustedResults
+      .filter(r => r.enabled && r.score > 0.5)
+      .flatMap(r => r.findings);
+
+    // Add temporal signals to risk factors
+    for (const signal of temporalResult.signals) {
+      if (signal.severity >= 0.4) {
+        riskFactors.push(signal.description);
+      }
+    }
+
+    // ── Step 7: Confidence score ────────────────────────────────────────────
+    const confidence = this.confidenceCalculator.compute({
+      results: adjustedResults,
+      hasSellerInfo: !!product.seller?.id,
+      hasDescription: !!product.description && product.description.length >= 50,
+      imageCount: product.images?.length ?? 0,
+      hasMarketPrice: !!product.price.market,
+      hasTemporalData: temporalResult.hasTemporalData,
+      reviewCount: product.reviewCount ?? 0,
+      sellerRating: product.seller?.rating,
+    });
+
+    // ── Step 8: Explanation ─────────────────────────────────────────────────
+    const explanation = this.explanationEngine.generate({
+      results: adjustedResults,
+      triggeredRules: interactionResult.triggeredRules,
+      temporalSignals: temporalResult.signals,
+      probability,
+      riskLevel: overallRiskLevel,
+      confidence,
+    });
+
+    // ── Step 9: Generate a feedback ID for linking future feedback ──────────
+    const feedbackId = `${product.id}-${Date.now()}`;
 
     return {
       probability,
       riskFactors,
-      detailedResults,
-      overallRiskLevel
+      detailedResults: adjustedResults,
+      overallRiskLevel,
+      confidence,
+      explanation,
+      triggeredRules: interactionResult.triggeredRules,
+      temporalSignals: temporalResult.signals,
+      feedbackId,
     };
   }
 
   private prepareProductData(data: any): Product {
-    // Convert input data to Product type
     return {
       id: data.id || `product-${Date.now()}`,
       title: data.title,
@@ -87,52 +159,32 @@ export class ScamDetectionModel {
   private async runEnabledHeuristics(
     product: Product,
     heuristics: ScamHeuristic[]
-  ): Promise<{
-    heuristicId: string;
-    name: string;
-    score: number;
-    enabled: boolean;
-    weight: number;
-    findings: string[];
-  }[]> {
-    const results = [];
-
-    // Run each heuristic if enabled
-    for (const heuristic of heuristics) {
+  ): Promise<HeuristicResult[]> {
+    // Run enabled heuristics in parallel
+    const promises = heuristics.map(heuristic => {
       if (heuristic.enabled) {
-        const result = await this.runHeuristic(product, heuristic);
-        results.push(result);
-      } else {
-        // Include disabled heuristics with zero score for UI display
-        results.push({
-          heuristicId: heuristic.id,
-          name: heuristic.name,
-          score: 0,
-          enabled: false,
-          weight: heuristic.weight,
-          findings: []
-        });
+        return this.runHeuristic(product, heuristic);
       }
-    }
+      return Promise.resolve({
+        heuristicId: heuristic.id,
+        name: heuristic.name,
+        score: 0,
+        enabled: false,
+        weight: heuristic.weight,
+        findings: [] as string[],
+      });
+    });
 
-    return results;
+    return Promise.all(promises);
   }
 
   private async runHeuristic(
     product: Product,
     heuristic: ScamHeuristic
-  ): Promise<{
-    heuristicId: string;
-    name: string;
-    score: number;
-    enabled: boolean;
-    weight: number;
-    findings: string[];
-  }> {
+  ): Promise<HeuristicResult> {
     let score = 0;
     let findings: string[] = [];
 
-    // Run the appropriate analysis based on heuristic ID
     switch (heuristic.id) {
       case "price_anomaly": {
         const result = await this.anomalyDetector.detectAnomalies(product);
@@ -145,7 +197,9 @@ export class ScamDetectionModel {
           const result = await this.imageAnalyzer.analyzeProductImages(
             product.images,
             product.title,
-            product.brand
+            product.brand,
+            product.seller?.id,
+            product.platform
           );
           score = result.score;
           findings = result.issues.map(i => i.description);
@@ -174,7 +228,6 @@ export class ScamDetectionModel {
         findings = result.issues;
         break;
       }
-      // Add cases for other heuristics
     }
 
     return {
@@ -183,54 +236,27 @@ export class ScamDetectionModel {
       score,
       enabled: true,
       weight: heuristic.weight,
-      findings
+      findings,
     };
   }
 
-  private calculateOverallProbability(
-    results: {
-      heuristicId: string;
-      name: string;
-      score: number;
-      enabled: boolean;
-      weight: number;
-      findings: string[];
-    }[],
-    globalThreshold: number
-  ): {
-    probability: number;
-    riskFactors: string[];
-  } {
-    // Only consider enabled heuristics
-    const enabledResults = results.filter(r => r.enabled);
-
-    if (enabledResults.length === 0) {
-      return { probability: 0, riskFactors: [] };
-    }
-
-    // Calculate weighted sum
-    let weightedSum = 0;
-    let totalWeight = 0;
-
-    for (const result of enabledResults) {
-      weightedSum += result.score * result.weight;
-      totalWeight += result.weight;
-    }
-
-    // Normalize to 0-1 scale
-    let probability = totalWeight > 0 ? weightedSum / totalWeight : 0;
-
-    // Apply global threshold adjustment
-    // Higher threshold = more sensitive (lower scores become higher)
-    const thresholdFactor = globalThreshold / 70; // 70 is our default
-    probability = Math.min(1, probability * thresholdFactor);
-
-    // Collect risk factors from results with significant scores
-    const riskFactors = enabledResults
-      .filter(r => r.score > 0.5) // Only include significant findings
-      .flatMap(r => r.findings);
-
-    return { probability, riskFactors };
+  /**
+   * Apply feedback-adjusted weights to each heuristic result.
+   * Falls back to the original weight if no feedback weight is stored.
+   */
+  private async applyFeedbackWeights(
+    results: HeuristicResult[]
+  ): Promise<HeuristicResult[]> {
+    const adjusted = await Promise.all(
+      results.map(async r => {
+        const adjustedWeight = await this.feedbackEngine.getAdjustedWeight(
+          r.heuristicId,
+          r.weight
+        );
+        return { ...r, weight: adjustedWeight };
+      })
+    );
+    return adjusted;
   }
 
   private determineRiskLevel(probability: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
