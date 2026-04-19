@@ -98,6 +98,14 @@ export const INTERACTION_RULES: InteractionRule[] = [
 
 // ── Engine ────────────────────────────────────────────────────────────────────
 
+/**
+ * Non-linear probability penalty per triggered rule severity.
+ * A single critical rule on a borderline medium-risk product elevates
+ * it to high; a high-severity rule provides a smaller but meaningful boost.
+ */
+const CRITICAL_RULE_PENALTY = 0.15;
+const HIGH_RULE_PENALTY = 0.08;
+
 export class InteractionEngine {
   private rules: InteractionRule[];
 
@@ -183,14 +191,17 @@ export class InteractionEngine {
     const thresholdFactor = globalThreshold / 70;
     probability = Math.min(1, probability * thresholdFactor);
 
-    // Non-linear penalty: critical rules push score toward 1.0 faster
+    // Non-linear penalty: critical rules push score toward 1.0 faster.
+    // Penalty values are calibrated so a single critical rule on a borderline
+    // medium-risk product elevates it to high, and a single high rule provides
+    // a smaller but meaningful boost.
     const criticalCount = triggeredRules.filter(r => r.severity === 'critical').length;
     const highCount = triggeredRules.filter(r => r.severity === 'high').length;
 
     if (criticalCount > 0) {
-      probability = Math.min(1, probability + 0.15 * criticalCount);
+      probability = Math.min(1, probability + CRITICAL_RULE_PENALTY * criticalCount);
     } else if (highCount > 0) {
-      probability = Math.min(1, probability + 0.08 * highCount);
+      probability = Math.min(1, probability + HIGH_RULE_PENALTY * highCount);
     }
 
     return probability;

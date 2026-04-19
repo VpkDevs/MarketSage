@@ -38,6 +38,21 @@ export interface ConfidenceInput {
 
 export class ConfidenceCalculator {
   /**
+   * Weighting of each factor in the overall confidence score.
+   *
+   * dataCompleteness weighs most heavily because missing product data is the
+   * single biggest source of false readings.  signalAgreement is next because
+   * inconsistent signals imply ambiguity.  Historical data and sample size are
+   * secondary enrichment signals.
+   */
+  private static readonly FACTOR_WEIGHTS = {
+    dataCompleteness: 0.35,
+    signalAgreement: 0.30,
+    historicalDataAvailability: 0.20,
+    sampleSize: 0.15,
+  } as const;
+
+  /**
    * Compute the confidence score for a given analysis.
    */
   compute(input: ConfidenceInput): ConfidenceScore {
@@ -48,12 +63,12 @@ export class ConfidenceCalculator {
       sampleSize: this.computeSampleSizeScore(input),
     };
 
-    // Weighted average: completeness and agreement matter most
+    const w = ConfidenceCalculator.FACTOR_WEIGHTS;
     const score =
-      factors.dataCompleteness * 0.35 +
-      factors.signalAgreement * 0.30 +
-      factors.historicalDataAvailability * 0.20 +
-      factors.sampleSize * 0.15;
+      factors.dataCompleteness * w.dataCompleteness +
+      factors.signalAgreement * w.signalAgreement +
+      factors.historicalDataAvailability * w.historicalDataAvailability +
+      factors.sampleSize * w.sampleSize;
 
     const level: ConfidenceScore['level'] =
       score >= 0.7 ? 'high' : score >= 0.4 ? 'medium' : 'low';

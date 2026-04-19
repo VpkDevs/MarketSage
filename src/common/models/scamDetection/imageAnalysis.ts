@@ -33,6 +33,11 @@ export interface EnhancedImageResult {
 
 // ── dHash implementation ──────────────────────────────────────────────────────
 
+/** ITU-R BT.601 luma coefficients for RGB → grayscale conversion. */
+const R_WEIGHT = 0.299;
+const G_WEIGHT = 0.587;
+const B_WEIGHT = 0.114;
+
 /**
  * Compute the dHash of an image from its grayscale pixel values.
  *
@@ -79,7 +84,10 @@ export function hammingDistance(hashA: string, hashB: string): number {
   return distance;
 }
 
-/** Two hashes are considered near-duplicates when Hamming distance ≤ this. */
+/** Two hashes are considered near-duplicates when Hamming distance ≤ this.
+ *  A threshold of 10 bits (out of 64) allows for minor JPEG compression
+ *  artefacts and slight resizing while still catching visually identical images.
+ */
 const NEAR_DUPLICATE_THRESHOLD = 10;
 
 // ── Engine ────────────────────────────────────────────────────────────────────
@@ -259,7 +267,7 @@ export class ImageAnalysisEngine {
             const gray: number[] = [];
             for (let i = 0; i < raw.length; i += 4) {
               gray.push(Math.round(
-                0.299 * raw[i] + 0.587 * raw[i + 1] + 0.114 * raw[i + 2]
+                R_WEIGHT * raw[i] + G_WEIGHT * raw[i + 1] + B_WEIGHT * raw[i + 2]
               ));
             }
             resolve({ data: gray, width: TARGET_W, height: TARGET_H });

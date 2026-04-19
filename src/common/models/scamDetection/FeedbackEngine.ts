@@ -25,8 +25,18 @@ import {
   FeedbackWeightAdjustment,
 } from '../../types/scamDetection';
 
+/**
+ * Conservative nudge applied to a heuristic weight per feedback batch.
+ * Small increments prevent overfitting to individual user signals while
+ * still allowing the system to adapt over time.
+ */
 const NUDGE_UP = 0.02;
 const NUDGE_DOWN = 0.02;
+
+/**
+ * Weight bounds ensure no heuristic becomes completely ignored (< 0.1)
+ * or dominates all others at maximum trust (> 1.0).
+ */
 const MIN_WEIGHT = 0.1;
 const MAX_WEIGHT = 1.0;
 
