@@ -143,10 +143,13 @@ describe('ScamDetectionModel', () => {
   });
 
   test('should respect user preferences when analyzing', async () => {
-    // Mock getUserScamPreferences to return custom preferences
+    // NOTE: ScamDetectionPreferences is a singleton with an in-memory cache
+    // keyed by userId. Earlier tests in this file already cached default
+    // preferences for 'test-user', so this test uses a fresh userId to make
+    // sure the mocked storage response below is actually consulted.
     const mockGetPreferences = require('../src/common/utils/storage').Storage.getUserScamPreferences;
     mockGetPreferences.mockResolvedValue({
-      userId: 'test-user',
+      userId: 'prefs-user',
       heuristics: [
         {
           id: 'price_anomaly',
@@ -174,7 +177,7 @@ describe('ScamDetectionModel', () => {
       price: 19.99,
       marketPrice: 99.99, // 80% discount
       sellerId: 'normal-seller',
-      userId: 'test-user'
+      userId: 'prefs-user'
     };
 
     // Analyze the product

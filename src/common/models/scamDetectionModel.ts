@@ -46,16 +46,19 @@ export class ScamDetectionModel {
     const product: Product = this.prepareProductData(data);
 
     // Run all enabled detection engines in parallel
-    const detailedResults = await this.runEnabledHeuristics(product, userPrefs.heuristics);
+    const internalResults = await this.runEnabledHeuristics(product, userPrefs.heuristics);
 
     // Calculate overall probability based on weighted scores
-    const { probability, riskFactors } = this.calculateOverallProbability(
-      detailedResults,
+    const { probability, riskFactors, maxSignal } = this.calculateOverallProbability(
+      internalResults,
       userPrefs.globalThreshold
     );
 
     // Determine overall risk level
-    const overallRiskLevel = this.determineRiskLevel(probability);
+    const overallRiskLevel = this.determineRiskLevel(probability, maxSignal);
+
+    // The public result shape does not carry the internal `assessed` flag
+    const detailedResults = internalResults.map(({ assessed, ...rest }) => rest);
 
     return {
       probability,
@@ -94,6 +97,7 @@ export class ScamDetectionModel {
     enabled: boolean;
     weight: number;
     findings: string[];
+    assessed: boolean;
   }[]> {
     const results = [];
 
@@ -110,7 +114,8 @@ export class ScamDetectionModel {
           score: 0,
           enabled: false,
           weight: heuristic.weight,
-          findings: []
+          findings: [],
+          assessed: false
         });
       }
     }
@@ -128,9 +133,15 @@ export class ScamDetectionModel {
     enabled: boolean;
     weight: number;
     findings: string[];
+    assessed: boolean;
   }> {
     let score = 0;
     let findings: string[] = [];
+    // `assessed` records whether an engine actually evaluated the product.
+    // A heuristic with no engine, or whose inputs are absent (no images,
+    // no seller), must not vote "safe" (score 0) in the weighted average —
+    // "not assessed" is not evidence of safety.
+    let assessed = false;
 
     // Run the appropriate analysis based on heuristic ID
     switch (heuristic.id) {
@@ -138,6 +149,7 @@ export class ScamDetectionModel {
         const result = await this.anomalyDetector.detectAnomalies(product);
         score = result.score;
         findings = result.anomalies.map(a => a.description);
+        assessed = true;
         break;
       }
       case "image_quality_analysis": {
@@ -149,6 +161,7 @@ export class ScamDetectionModel {
           );
           score = result.score;
           findings = result.issues.map(i => i.description);
+          assessed = true;
         }
         break;
       }
@@ -157,6 +170,7 @@ export class ScamDetectionModel {
           const result = await this.sellerAnalyzer.analyzeSeller(product.seller.id);
           score = result.score;
           findings = result.reasons;
+          assessed = true;
         }
         break;
       }
@@ -165,6 +179,7 @@ export class ScamDetectionModel {
           const result = await this.reviewAnalyzer.analyzeReviews(product.id);
           score = result.score;
           findings = result.issues;
+          assessed = true;
         }
         break;
       }
@@ -172,9 +187,12 @@ export class ScamDetectionModel {
         const result = await this.crossPlatformVerifier.verify(product);
         score = result.score;
         findings = result.issues;
+        assessed = true;
         break;
       }
-      // Add cases for other heuristics
+      // Heuristics without an engine case (e.g. new_seller_large_inventory,
+      // specification_anomalies, product_description_analysis) stay
+      // unassessed until an engine is implemented for them.
     }
 
     return {
@@ -183,7 +201,8 @@ export class ScamDetectionModel {
       score,
       enabled: true,
       weight: heuristic.weight,
-      findings
+      findings,
+      assessed
     };
   }
 
@@ -195,24 +214,28 @@ export class ScamDetectionModel {
       enabled: boolean;
       weight: number;
       findings: string[];
+      assessed: boolean;
     }[],
     globalThreshold: number
   ): {
     probability: number;
     riskFactors: string[];
+    maxSignal: number;
   } {
-    // Only consider enabled heuristics
-    const enabledResults = results.filter(r => r.enabled);
+    // Only heuristics that are enabled AND actually assessed the product
+    // take part in the average. Unassessed heuristics (no engine yet, or
+    // missing inputs) are excluded rather than counted as zero-risk.
+    const assessedResults = results.filter(r => r.enabled && r.assessed);
 
-    if (enabledResults.length === 0) {
-      return { probability: 0, riskFactors: [] };
+    if (assessedResults.length === 0) {
+      return { probability: 0, riskFactors: [], maxSignal: 0 };
     }
 
     // Calculate weighted sum
     let weightedSum = 0;
     let totalWeight = 0;
 
-    for (const result of enabledResults) {
+    for (const result of assessedResults) {
       weightedSum += result.score * result.weight;
       totalWeight += result.weight;
     }
@@ -226,14 +249,22 @@ export class ScamDetectionModel {
     probability = Math.min(1, probability * thresholdFactor);
 
     // Collect risk factors from results with significant scores
-    const riskFactors = enabledResults
+    const riskFactors = assessedResults
       .filter(r => r.score > 0.5) // Only include significant findings
       .flatMap(r => r.findings);
 
-    return { probability, riskFactors };
+    const maxSignal = Math.max(...assessedResults.map(r => r.score));
+
+    return { probability, riskFactors, maxSignal };
   }
 
-  private determineRiskLevel(probability: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  private determineRiskLevel(probability: number, maxSignal: number): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    // A single strong signal (one engine scoring >= 0.8) escalates the level
+    // to at least HIGH: one loud alarm must not be averaged away by quieter
+    // checks. This is a floor, not a replacement for the weighted level.
+    if (maxSignal >= 0.8 && probability < 0.6) {
+      return 'HIGH';
+    }
     if (probability < 0.3) return 'LOW';
     if (probability < 0.6) return 'MEDIUM';
     if (probability < 0.8) return 'HIGH';

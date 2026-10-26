@@ -90,7 +90,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
       setError(null);
 
       // Log analytics event
-      await authProvider.logSecurityEvent('price_analysis_initiated', {
+      await authProvider.recordActivityEvent('price_analysis_initiated', {
         timestamp: new Date(),
         userId: user.id
       });
@@ -185,7 +185,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
       setAnalytics(mockAnalytics);
 
       // Log successful analysis
-      await authProvider.logSecurityEvent('price_analysis_completed', {
+      await authProvider.recordActivityEvent('price_analysis_completed', {
         timestamp: new Date(),
         userId: user.id,
         priceChange: mockCurrentPrice.changePercent,
@@ -200,7 +200,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
       console.error('Enhanced InsightSection Error:', err);
       
       if (user) {
-        await authProvider.logSecurityEvent('price_analysis_failed', {
+        await authProvider.recordActivityEvent('price_analysis_failed', {
           timestamp: new Date(),
           userId: user.id,
           error: errorMessage
@@ -213,8 +213,8 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
     }
   };
 
-  const getPriceChangeColor = (change: number): 'success' | 'danger' => {
-    return change < 0 ? 'success' : 'danger';
+  const getPriceChangeColor = (change: number): 'success' | 'error' => {
+    return change < 0 ? 'success' : 'error';
   };
 
   const getInsightIcon = (type: string): string => {
@@ -227,11 +227,11 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
     }
   };
 
-  const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'danger' => {
+  const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'error' => {
     switch (availability) {
       case 'in_stock': return 'success';
       case 'low_stock': return 'warning';
-      case 'out_of_stock': return 'danger';
+      case 'out_of_stock': return 'error';
       default: return 'warning';
     }
   };
@@ -247,7 +247,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
   if (!user) {
     return (
       <div className={styles.section}>
-        <Alert type="info" title="Authentication Required">
+        <Alert variant="info" title="Authentication Required">
           Please log in to access price insights and analytics.
         </Alert>
       </div>
@@ -264,7 +264,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
           </Badge>
           <Button
             variant="secondary"
-            size="small"
+            size="sm"
             onClick={fetchPriceAnalytics}
             disabled={loading}
             aria-label="Refresh analysis"
@@ -274,7 +274,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
           {user.securityLevel === 'premium' && (
             <Button
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => setShowDetailedAnalysis(true)}
               aria-label="Detailed analysis"
             >
@@ -285,9 +285,9 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
       </div>
 
       {loading && (
-        <Card variant="outline">
+        <Card variant="outlined">
           <div className={styles.loadingContainer}>
-            <Loading variant="spinner" size="medium" />
+            <Loading variant="spinner" size="md" />
             <p>Analyzing market data...</p>
           </div>
         </Card>
@@ -295,10 +295,10 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
 
       {error && (
         <Alert 
-          type="error" 
+          variant="error" 
           title="Analysis Failed"
-          action={
-            <Button size="small" onClick={fetchPriceAnalytics}>
+          actions={
+            <Button size="sm" onClick={fetchPriceAnalytics}>
               Retry
             </Button>
           }
@@ -313,7 +313,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
           <Card variant="elevated" className={styles.priceCard}>
             <div className={styles.priceHeader}>
               <h3>Current Price</h3>
-              <Badge variant="primary" size="small">Live</Badge>
+              <Badge variant="primary" size="sm">Live</Badge>
             </div>
             <div className={styles.priceDisplay}>
               <span className={styles.currentPrice}>
@@ -322,7 +322,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
               <div className={styles.priceChange}>
                 <Badge 
                   variant={getPriceChangeColor(currentPrice.change)}
-                  size="small"
+                  size="sm"
                 >
                   {currentPrice.change >= 0 ? '+' : ''}{currentPrice.change.toFixed(2)} 
                   ({currentPrice.changePercent.toFixed(1)}%)
@@ -335,7 +335,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
           </Card>
 
           {/* Insights Overview */}
-          <Card variant="outline">
+          <Card variant="outlined">
             <div className={styles.cardHeader}>
               <h3>Key Insights</h3>
               <Badge variant="success">{analytics.insights.length}</Badge>
@@ -350,7 +350,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
                     <h4>{insight.title}</h4>
                     <p>{insight.description}</p>
                     <div className={styles.insightMeta}>
-                      <Badge variant="secondary" size="small">
+                      <Badge variant="secondary" size="sm">
                         {insight.confidence}% confidence
                       </Badge>
                       <span className={styles.insightTime}>
@@ -367,14 +367,14 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
           <Tabs
             items={insightTabs}
             activeTab={activeInsightTab}
-            onTabChange={setActiveInsightTab}
+            onChange={(tabId: string) => setActiveInsightTab(tabId as typeof activeInsightTab)}
             variant="underline"
           />
 
           {/* Tab Content */}
           <div className={styles.tabContent}>
             {activeInsightTab === 'overview' && (
-              <Card variant="outline">
+              <Card variant="outlined">
                 <h3>Recommendations</h3>
                 <div className={styles.recommendationsList}>
                   {analytics.recommendations.map((rec, index) => (
@@ -388,7 +388,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
             )}
 
             {activeInsightTab === 'trends' && user.securityLevel === 'premium' && (
-              <Card variant="outline">
+              <Card variant="outlined">
                 <h3>Price Trends</h3>
                 <div className={styles.trendsContainer}>
                   <div className={styles.priceHistory}>
@@ -400,11 +400,11 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
                         <span className={styles.historyPrice}>
                           ${point.price.toFixed(2)}
                         </span>
-                        <Progress 
+                        <Progress
                           value={(point.price / Math.max(...analytics.priceHistory.map(p => p.price))) * 100}
                           max={100}
-                          variant="primary"
-                          size="small"
+                          variant="default"
+                          size="sm"
                         />
                       </div>
                     ))}
@@ -414,11 +414,11 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
             )}
 
             {activeInsightTab === 'trends' && user.securityLevel !== 'premium' && (
-              <Card variant="outline">
+              <Card variant="outlined">
                 <div className={styles.upgradePrompt}>
                   <h3>Premium Feature</h3>
                   <p>Upgrade to Premium to access detailed price trends and historical analysis.</p>
-                  <Button variant="primary" size="small">
+                  <Button variant="primary" size="sm">
                     Upgrade Now
                   </Button>
                 </div>
@@ -426,7 +426,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
             )}
 
             {activeInsightTab === 'competitors' && user.securityLevel !== 'basic' && (
-              <Card variant="outline">
+              <Card variant="outlined">
                 <h3>Competitor Pricing</h3>
                 <div className={styles.competitorsList}>
                   {analytics.competitors.map((competitor, index) => (
@@ -437,7 +437,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
                           <span>⭐ {competitor.rating}</span>
                           <Badge 
                             variant={getAvailabilityColor(competitor.availability)}
-                            size="small"
+                            size="sm"
                           >
                             {competitor.availability.replace('_', ' ')}
                           </Badge>
@@ -456,7 +456,7 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
                       </div>
                       <Button 
                         variant="link" 
-                        size="small"
+                        size="sm"
                         onClick={() => window.open(competitor.url, '_blank')}
                       >
                         View
@@ -468,11 +468,11 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
             )}
 
             {activeInsightTab === 'competitors' && user.securityLevel === 'basic' && (
-              <Card variant="outline">
+              <Card variant="outlined">
                 <div className={styles.upgradePrompt}>
                   <h3>Enhanced Feature</h3>
                   <p>Upgrade to Enhanced or Premium to compare prices across multiple retailers.</p>
-                  <Button variant="primary" size="small">
+                  <Button variant="primary" size="sm">
                     Upgrade Now
                   </Button>
                 </div>
@@ -481,17 +481,17 @@ const EnhancedInsightSection: React.FC<EnhancedInsightSectionProps> = ({
           </div>
 
           {/* Quick Actions */}
-          <Card variant="outline">
+          <Card variant="outlined">
             <h3>Quick Actions</h3>
             <div className={styles.quickActions}>
-              <Button variant="success" size="small" fullWidth>
+              <Button variant="success" size="sm" fullWidth>
                 💰 Set Price Alert
               </Button>
-              <Button variant="primary" size="small" fullWidth>
+              <Button variant="primary" size="sm" fullWidth>
                 📊 Export Analysis
               </Button>
               {user.securityLevel === 'premium' && (
-                <Button variant="secondary" size="small" fullWidth>
+                <Button variant="secondary" size="sm" fullWidth>
                   🔔 Smart Notifications
                 </Button>
               )}
@@ -529,11 +529,11 @@ const DetailedAnalysisModal: React.FC<DetailedAnalysisModalProps> = ({
       title="Detailed Market Analysis"
       isOpen={true}
       onClose={onClose}
-      size="large"
+      size="lg"
     >
       <div className={styles.detailedAnalysisContent}>
         {currentPrice && (
-          <Card variant="outline">
+          <Card variant="outlined">
             <h3>Price Analysis Summary</h3>
             <div className={styles.analysisGrid}>
               <div className={styles.analysisItem}>
@@ -564,23 +564,23 @@ const DetailedAnalysisModal: React.FC<DetailedAnalysisModalProps> = ({
           </Card>
         )}
 
-        <Card variant="outline">
+        <Card variant="outlined">
           <h3>Market Intelligence</h3>
           <div className={styles.intelligenceList}>
             {analytics.insights.map((insight) => (
               <Alert 
                 key={insight.id}
-                type={insight.impact === 'high' ? 'warning' : 'info'}
+                variant={insight.impact === 'high' ? 'warning' : 'info'}
                 title={insight.title}
               >
                 <p>{insight.description}</p>
                 <div className={styles.insightDetails}>
-                  <Badge variant="secondary" size="small">
+                  <Badge variant="secondary" size="sm">
                     {insight.confidence}% confidence
                   </Badge>
                   <Badge 
-                    variant={insight.impact === 'high' ? 'danger' : insight.impact === 'medium' ? 'warning' : 'success'}
-                    size="small"
+                    variant={insight.impact === 'high' ? 'error' : insight.impact === 'medium' ? 'warning' : 'success'}
+                    size="sm"
                   >
                     {insight.impact} impact
                   </Badge>

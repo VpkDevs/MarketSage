@@ -1,28 +1,16 @@
-// Add any global test setup here
+// Global test setup.
+//
+// Installs the shared chrome API mock (tests/setup/mocks/chrome.ts), whose
+// storage.local is a functional in-memory implementation, so suites can
+// exercise the real Storage class and other chrome-backed code.
+//
+// NOTE: Storage must NOT be mocked globally here. A previous version of
+// this file replaced src/common/utils/storage with a hand-maintained stub
+// that drifted from the real class (missing methods, undefined returns),
+// which made the Storage unit suite test the stub instead of the code.
+// Suites that need Storage stubbed declare their own jest.mock locally.
 import '@testing-library/jest-dom';
-
-// Mock Storage
-jest.mock('../src/common/utils/storage', () => {
-  const mockStorage = {
-    getUserScamPreferences: jest.fn(),
-    setUserScamPreferences: jest.fn(),
-    getSellerRating: jest.fn(),
-    getPriceHistory: jest.fn(),
-    getProductCache: jest.fn(),
-    saveUnifiedCart: jest.fn(),
-    getUnifiedCart: jest.fn(),
-    saveCheckoutSession: jest.fn(),
-    getCheckoutSession: jest.fn(),
-    getCurrentUser: jest.fn(),
-    getCategories: jest.fn(),
-    getProductsByCategory: jest.fn(),
-    clearAll: jest.fn()
-  };
-  
-  return {
-    Storage: mockStorage
-  };
-});
+import './setup/mocks/chrome';
 
 // Mock TensorFlow.js
 jest.mock('@tensorflow/tfjs', () => {

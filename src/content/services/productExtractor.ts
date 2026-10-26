@@ -3,6 +3,17 @@ import { DataProcessing } from '../../common/utils/dataProcessing';
 import { PriceExtractor } from './priceExtractor';
 import { PlatformDetector } from './platformDetector';
 
+/**
+ * What extract() actually guarantees beyond the shared Product type:
+ * images is always present (possibly empty) and seller always has an id
+ * and a name ('Unknown Seller' when the page exposes none). Callers and
+ * tests may rely on both without optional chaining.
+ */
+export interface ExtractedProduct extends Product {
+  images: string[];
+  seller: { id: string; name: string; rating?: number };
+}
+
 export class ProductExtractor {
   private platformDetector: PlatformDetector;
   private priceExtractor: PriceExtractor;
@@ -12,7 +23,7 @@ export class ProductExtractor {
     this.priceExtractor = new PriceExtractor();
   }
 
-  async extract(): Promise<Product> {
+  async extract(): Promise<ExtractedProduct> {
     if (!this.platformDetector.isSupported()) {
       throw new Error('Unsupported platform');
     }

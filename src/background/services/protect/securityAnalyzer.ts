@@ -36,15 +36,18 @@ export class SecurityAnalyzer {
   }
 
   async analyzeProduct(product: Product): Promise<SecurityMetrics> {
-    const [scamAnalysis, sellerTrust, priceRisk] = await Promise.all([
+    const [scamAnalysis, sellerTrust, priceRisk, generatedWarnings] = await Promise.all([
       this.scamDetector.analyze({
         title: product.title,
-        description: product.description,
+        description: product.description ?? '',
         price: product.price.current,
         marketPrice: product.price.market
       }),
-      this.calculateSellerTrust(product.seller.id),
-      this.analyzePriceRisk(product)
+      // No seller on the product: calculateSellerTrust falls back to its
+      // documented neutral default (0.5) when no rating is found.
+      this.calculateSellerTrust(product.seller?.id ?? ''),
+      this.analyzePriceRisk(product),
+      this.generateWarnings(product)
     ]);
 
     const riskScore = this.calculateOverallRisk(
@@ -55,7 +58,7 @@ export class SecurityAnalyzer {
 
     return {
       riskScore: Math.round(riskScore * 100),
-      warnings: [...scamAnalysis.riskFactors],
+      warnings: [...scamAnalysis.riskFactors, ...generatedWarnings],
       sellerTrust: Math.round(sellerTrust * 100)
     };
   }
@@ -140,12 +143,14 @@ export class SecurityAnalyzer {
   private async generateWarnings(product: Product): Promise<string[]> {
     const warnings: string[] = [];
 
-    // Seller warnings
-    const sellerRating = await Storage.getSellerRating(product.seller.id);
-    if (!sellerRating) {
-      warnings.push("New seller with no rating history");
-    } else if (sellerRating < 4.0) {
-      warnings.push("Seller has below average ratings");
+    // Seller warnings (only when the product carries seller info)
+    if (product.seller) {
+      const sellerRating = await Storage.getSellerRating(product.seller.id);
+      if (!sellerRating) {
+        warnings.push("New seller with no rating history");
+      } else if (sellerRating < 4.0) {
+        warnings.push("Seller has below average ratings");
+      }
     }
 
     // Price warnings

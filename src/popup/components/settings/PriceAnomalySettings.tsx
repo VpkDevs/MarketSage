@@ -154,8 +154,8 @@ const PriceAnomalySettings: React.FC<PriceAnomalySettingsProps> = ({
       
       {heuristic.enabled && (
         <div className={styles.settingsControls}>
-          <div className={styles.settingRow}>
-            <label>Importance (Weight):</label>
+          <div className={styles.settingRow} role="group" aria-label="Importance (Weight):">
+            <span>Importance (Weight):</span>
             <div className={styles.sliderContainer}>
               <input 
                 type="range" 
@@ -169,8 +169,8 @@ const PriceAnomalySettings: React.FC<PriceAnomalySettingsProps> = ({
             </div>
           </div>
           
-          <div className={styles.settingRow}>
-            <label>Sensitivity (Standard Deviations):</label>
+          <div className={styles.settingRow} role="group" aria-label="Sensitivity (Standard Deviations):">
+            <span>Sensitivity (Standard Deviations):</span>
             <div className={styles.sliderContainer}>
               <input 
                 type="range" 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EnhancedAuthProvider } from '../../core/auth/EnhancedAuthProvider';
+import { EnhancedAuthProvider, AuthUser } from '../../core/auth/EnhancedAuthProvider';
 import { 
   Button, 
   Card, 
@@ -24,6 +24,23 @@ interface User {
   isVerified: boolean;
   securityLevel: 'basic' | 'enhanced' | 'premium';
 }
+
+// Adapt the auth provider's AuthUser to the shape the popup UI uses.
+// securityLevel is the user's access tier: the provider records it as a
+// permission ('basic_access' by default; 'enhanced_access' /
+// 'premium_access' when granted).
+const toAppUser = (authUser: AuthUser): User => ({
+  id: authUser.id,
+  email: authUser.email || '',
+  name: authUser.displayName || authUser.username || authUser.email || 'User',
+  avatar: authUser.avatar,
+  isVerified: authUser.verified,
+  securityLevel: authUser.permissions.includes('premium_access')
+    ? 'premium'
+    : authUser.permissions.includes('enhanced_access')
+      ? 'enhanced'
+      : 'basic'
+});
 
 interface AppState {
   user: User | null;
@@ -58,16 +75,17 @@ const EnhancedApp: React.FC = () => {
   const initializeApp = async () => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
-      
-      // Check if user is already authenticated
-      const isAuth = await authProvider.validateCurrentSession();
-      
+
+      // Wait for the provider's session restore, then read its state
+      await authProvider.whenReady();
+      const isAuth = authProvider.isAuthenticated();
+
       if (isAuth) {
-        const userProfile = await authProvider.getUserProfile();
+        const authUser = authProvider.getCurrentUser();
         setState(prev => ({
           ...prev,
           isAuthenticated: true,
-          user: userProfile as User,
+          user: authUser ? toAppUser(authUser) : null,
           isLoading: false
         }));
         
@@ -116,22 +134,22 @@ const EnhancedApp: React.FC = () => {
   const handleLogin = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
-      
-      const result = await authProvider.login(email, password);
-      
-      if (result.success) {
-        const userProfile = await authProvider.getUserProfile();
+
+      const result = await authProvider.login({ email, password });
+
+      if (result.isValid) {
+        const authUser = result.user ?? authProvider.getCurrentUser();
         setState(prev => ({
           ...prev,
           isAuthenticated: true,
-          user: userProfile as User,
+          user: authUser ? toAppUser(authUser) : null,
           showLogin: false,
           isLoading: false
         }));
-        
+
         addNotification('success', 'Successfully logged in!');
       } else {
-        addNotification('error', result.error || 'Login failed');
+        addNotification('error', result.errors[0] || 'Login failed');
         setState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
@@ -188,7 +206,7 @@ const EnhancedApp: React.FC = () => {
     return (
       <div className={styles.appContainer}>
         <div className={styles.loadingContainer}>
-          <Loading variant="spinner" size="large" />
+          <Loading variant="spinner" size="lg" />
           <p className={styles.loadingText}>Initializing MarketSage...</p>
         </div>
       </div>
@@ -200,12 +218,12 @@ const EnhancedApp: React.FC = () => {
       {/* Notifications */}
       <div className={styles.notificationContainer}>
         {state.notifications.map(notification => (
-          <Alert 
+          <Alert
             key={notification.id}
-            type={notification.type}
+            variant={notification.type}
             title={notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
-            closable
-            onClose={() => 
+            dismissible
+            onDismiss={() =>
               setState(prev => ({
                 ...prev,
                 notifications: prev.notifications.filter(n => n.id !== notification.id)
@@ -222,7 +240,7 @@ const EnhancedApp: React.FC = () => {
         <div className={styles.headerContent}>
           <div className={styles.logo}>
             <h1>MarketSage</h1>
-            <Badge variant="primary" size="small">v2.0</Badge>
+            <Badge variant="primary" size="sm">v2.0</Badge>
           </div>
           
           {state.isAuthenticated && state.user && (
@@ -231,7 +249,7 @@ const EnhancedApp: React.FC = () => {
                 <span className={styles.userName}>{state.user.name}</span>
                 <Badge 
                   variant={getSecurityBadgeColor(state.user.securityLevel)}
-                  size="small"
+                  size="sm"
                 >
                   {state.user.securityLevel}
                 </Badge>
@@ -239,7 +257,7 @@ const EnhancedApp: React.FC = () => {
               <div className={styles.userActions}>
                 <Button
                   variant="ghost"
-                  size="small"
+                  size="sm"
                   onClick={() => setState(prev => ({ ...prev, showSettings: true }))}
                   aria-label="User settings"
                 >
@@ -247,7 +265,7 @@ const EnhancedApp: React.FC = () => {
                 </Button>
                 <Button
                   variant="ghost"
-                  size="small"
+                  size="sm"
                   onClick={handleLogout}
                   aria-label="Logout"
                 >
@@ -267,7 +285,7 @@ const EnhancedApp: React.FC = () => {
             <Tabs
               items={tabItems}
               activeTab={activeTab}
-              onTabChange={setActiveTab}
+              onChange={(tabId: string) => setActiveTab(tabId as ActiveTab)}
               variant="pills"
             />
 
@@ -374,7 +392,7 @@ const LoginCard: React.FC<LoginCardProps> = ({ onLogin, isLoading, onNotificatio
         <Button
           type="submit"
           variant="primary"
-          size="large"
+          size="lg"
           fullWidth
           disabled={isLoading || !email || !password}
           loading={isLoading}
@@ -384,10 +402,10 @@ const LoginCard: React.FC<LoginCardProps> = ({ onLogin, isLoading, onNotificatio
       </form>
       
       <div className={styles.loginFooter}>
-        <Button variant="link" size="small">
+        <Button variant="link" size="sm">
           Forgot password?
         </Button>
-        <Button variant="link" size="small">
+        <Button variant="link" size="sm">
           Create account
         </Button>
       </div>
@@ -415,10 +433,58 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     securityLevel: user.securityLevel,
     dataCollection: false
   });
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [aiKeyLoaded, setAiKeyLoaded] = useState(false);
+
+  // The AI explanation feature is bring-your-own-key: the key lives in
+  // extension storage (marketsage_ai_settings), separate from account
+  // preferences, and is only ever sent to Google's Gemini API.
+  useEffect(() => {
+    chrome.storage.local.get('marketsage_ai_settings').then(result => {
+      const key = result.marketsage_ai_settings?.geminiApiKey;
+      if (typeof key === 'string') setGeminiApiKey(key);
+      setAiKeyLoaded(true);
+    });
+  }, []);
+
+  const handleSaveAiKey = async () => {
+    try {
+      await chrome.storage.local.set({
+        marketsage_ai_settings: { geminiApiKey: geminiApiKey.trim() }
+      });
+      onNotification('success', geminiApiKey.trim()
+        ? 'Gemini API key saved — explanations will be AI-written'
+        : 'Gemini API key removed — explanations will use the built-in text');
+    } catch (error) {
+      onNotification('error', 'Failed to save API key');
+    }
+  };
 
   const handleSaveSettings = async () => {
     try {
-      await authProvider.updateUserPreferences(preferences);
+      // Map the modal's flat toggles onto the provider's UserPreferences
+      // shape, preserving current values for everything the modal does
+      // not control. (The modal's securityLevel is the user's access
+      // tier — a permission, not a preference — so it is not saved here.)
+      const current = authProvider.getCurrentUser()?.preferences;
+      await authProvider.updateUserPreferences({
+        notifications: {
+          security: preferences.enableNotifications,
+          priceAlerts: preferences.enableNotifications,
+          deals: current?.notifications.deals ?? false,
+          social: current?.notifications.social ?? false
+        },
+        marketplace: {
+          defaultRiskTolerance: current?.marketplace.defaultRiskTolerance ?? 'medium',
+          autoAnalyze: preferences.autoAnalysis,
+          hideHighRisk: current?.marketplace.hideHighRisk ?? false
+        },
+        privacy: {
+          shareAnalytics: preferences.dataCollection,
+          socialVisibility: current?.privacy.socialVisibility ?? 'private',
+          dataRetention: current?.privacy.dataRetention ?? 30
+        }
+      });
       onNotification('success', 'Settings saved successfully');
       onClose();
     } catch (error) {
@@ -431,10 +497,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       title="User Settings"
       isOpen={true}
       onClose={onClose}
-      size="medium"
+      size="md"
     >
       <div className={styles.settingsContent}>
-        <Card variant="outline">
+        <Card variant="outlined">
           <h3>Account Information</h3>
           <div className={styles.accountInfo}>
             <p><strong>Email:</strong> {user.email}</p>
@@ -443,7 +509,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <strong>Status:</strong> 
               <Badge 
                 variant={user.isVerified ? 'success' : 'warning'}
-                size="small"
+                size="sm"
               >
                 {user.isVerified ? 'Verified' : 'Unverified'}
               </Badge>
@@ -451,7 +517,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </Card>
         
-        <Card variant="outline">
+        <Card variant="outlined">
           <h3>Privacy & Security</h3>
           <div className={styles.settingsGrid}>
             <label className={styles.settingItem}>
@@ -492,6 +558,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </Card>
         
+        <Card variant="outlined">
+          <h3>AI Explanations (optional)</h3>
+          <p>
+            Protect can explain a risk rating in plain language. With your
+            own Google Gemini API key the explanation is written by AI;
+            without one, a built-in explanation is used instead. The key
+            stays in this browser and is only sent to Google's Gemini API.
+          </p>
+          <Input
+            type="password"
+            placeholder="Gemini API key"
+            value={geminiApiKey}
+            onChange={(e) => setGeminiApiKey(e.target.value)}
+            disabled={!aiKeyLoaded}
+          />
+          <Button variant="secondary" size="sm" onClick={handleSaveAiKey} disabled={!aiKeyLoaded}>
+            Save API Key
+          </Button>
+        </Card>
+
         <div className={styles.modalActions}>
           <Button variant="secondary" onClick={onClose}>
             Cancel

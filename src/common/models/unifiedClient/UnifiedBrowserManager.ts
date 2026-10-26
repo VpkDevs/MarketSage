@@ -1,19 +1,13 @@
 import { ScamDetectionModel } from "../scamDetectionModel";
-import { Product, Platform } from "../../types";
+import { Product, Platform, CartItem, PlatformCheckout, CheckoutSession } from "../../types";
 import { Storage } from "../../utils/storage";
 import { UserPreferences } from "../userPreferences";
 
-// Define interfaces for the unified client
-export interface CartItem {
-  productId: string;
-  platform: Platform;
-  title: string;
-  price: number;
-  quantity: number;
-  image: string;
-  url: string;
-  addedAt: number;
-}
+// CartItem, PlatformCheckout and CheckoutSession are defined once in
+// common/types (types/scamDetection) and re-exported here for existing
+// import paths. This module previously carried duplicate copies whose
+// PlatformCheckout.platform (Platform enum vs string) had drifted apart.
+export type { CartItem, PlatformCheckout, CheckoutSession };
 
 export interface ProductFilters {
   minPrice?: number;
@@ -37,21 +31,7 @@ export interface BrowseResult {
   }[];
 }
 
-export interface PlatformCheckout {
-  platform: Platform;
-  items: CartItem[];
-  status: 'pending' | 'in-progress' | 'completed' | 'failed';
-  checkoutUrl: string;
-  error?: string;
-}
 
-export interface CheckoutSession {
-  sessionId: string;
-  platforms: PlatformCheckout[];
-  startedAt: number;
-  completedAt?: number;
-  status: 'started' | 'in-progress' | 'completed' | 'failed';
-}
 
 export class UnifiedBrowserManager {
   private static instance: UnifiedBrowserManager;
@@ -91,7 +71,7 @@ export class UnifiedBrowserManager {
       allProducts.map(async (product) => {
         const scamAnalysis = await this.scamDetector.analyze({
           title: product.title,
-          description: product.description,
+          description: product.description || '',
           price: product.price.current,
           marketPrice: product.price.market,
           images: product.images,
@@ -183,7 +163,7 @@ export class UnifiedBrowserManager {
       price: product.price.current,
       quantity,
       image: product.images?.[0] || '',
-      url: product.url,
+      url: product.url || '',
       addedAt: Date.now()
     };
     
@@ -207,7 +187,7 @@ export class UnifiedBrowserManager {
   
   async proceedToCheckout(): Promise<CheckoutSession> {
     // Group cart items by platform
-    const itemsByPlatform = new Map<Platform, CartItem[]>();
+    const itemsByPlatform = new Map<string, CartItem[]>();
     
     this.unifiedCart.forEach(item => {
       const platformItems = itemsByPlatform.get(item.platform) || [];
@@ -234,7 +214,7 @@ export class UnifiedBrowserManager {
     return checkoutSession;
   }
   
-  private generateCheckoutUrl(platform: Platform, items: CartItem[]): string {
+  private generateCheckoutUrl(platform: string, items: CartItem[]): string {
     // Generate platform-specific checkout URL with items
     // This would be implemented differently for each platform
     switch (platform) {

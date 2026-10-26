@@ -1,6 +1,15 @@
 import { ScamDetectionModel } from '../../src/common/models/scamDetectionModel';
 import { ScamDetectionPreferences } from '../../src/common/models/scamDetection/userPreferences';
 import { Storage } from '../../src/common/utils/storage';
+import { UserScamDetectionPreferences } from '../../src/common/types';
+
+// getUserPreferences is a real method on the preferences singleton (not a
+// jest mock), so stub it with jest.spyOn. The model holds the same
+// singleton instance, so the stub is what the model will call.
+const stubPreferences = (preferences: ScamDetectionPreferences, prefs: object) =>
+  jest
+    .spyOn(preferences, 'getUserPreferences')
+    .mockResolvedValue(prefs as UserScamDetectionPreferences);
 
 // This is an integration test that tests how user preferences affect scam detection results
 
@@ -13,8 +22,10 @@ jest.mock('../../src/common/models/scamDetection/anomalyDetection', () => {
     AnomalyDetectionEngine: jest.fn().mockImplementation(() => {
       return {
         detectAnomalies: jest.fn().mockImplementation((product) => {
-          // Simple implementation that returns high score for low prices
-          const priceRatio = product.price / (product.marketPrice || product.price * 2);
+          // Simple implementation that returns high score for low prices.
+          // The model passes a Product whose price is an object
+          // ({ current, market, ... }) — same shape the unit-suite mock uses.
+          const priceRatio = product.price.current / (product.price.market || product.price.current * 2);
           const score = priceRatio < 0.5 ? 0.8 : 0.2;
           
           return Promise.resolve({
@@ -76,7 +87,7 @@ describe('Scam Detection Integration', () => {
     
     // First test with default preferences
     // Mock getUserPreferences to return default preferences
-    (preferences.getUserPreferences as jest.Mock).mockResolvedValue({
+    stubPreferences(preferences, {
       userId: 'test-user',
       heuristics: [
         {
@@ -109,7 +120,7 @@ describe('Scam Detection Integration', () => {
     
     // Now test with modified preferences
     // Mock getUserPreferences to return modified preferences
-    (preferences.getUserPreferences as jest.Mock).mockResolvedValue({
+    stubPreferences(preferences, {
       userId: 'test-user',
       heuristics: [
         {
@@ -161,7 +172,7 @@ describe('Scam Detection Integration', () => {
     };
     
     // Test with low threshold (less sensitive)
-    (preferences.getUserPreferences as jest.Mock).mockResolvedValue({
+    stubPreferences(preferences, {
       userId: 'test-user',
       heuristics: [
         {
@@ -179,7 +190,7 @@ describe('Scam Detection Integration', () => {
     const lowThresholdResult = await model.analyze(testProduct);
     
     // Test with high threshold (more sensitive)
-    (preferences.getUserPreferences as jest.Mock).mockResolvedValue({
+    stubPreferences(preferences, {
       userId: 'test-user',
       heuristics: [
         {
@@ -198,8 +209,14 @@ describe('Scam Detection Integration', () => {
     
     // The high threshold result should have a higher risk score
     expect(highThresholdResult.probability).toBeGreaterThan(lowThresholdResult.probability);
-    
-    // The risk levels might be different
-    expect(highThresholdResult.overallRiskLevel).not.toBe(lowThresholdResult.overallRiskLevel);
+
+    // Both probabilities (0.14 and 0.26 for this weak 0.2 base signal) map
+    // to LOW under the model's documented level boundaries
+    // (LOW < 0.3 <= MEDIUM < 0.6 <= HIGH < 0.8 <= CRITICAL — the same
+    // mapping the unit suite asserts). The threshold's effect is the
+    // probability shift asserted above; a level change for a signal this
+    // weak would contradict that mapping.
+    expect(lowThresholdResult.overallRiskLevel).toBe('LOW');
+    expect(highThresholdResult.overallRiskLevel).toBe('LOW');
   });
 });

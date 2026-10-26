@@ -52,6 +52,9 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
   onNotification 
 }) => {
   const [metrics, setMetrics] = useState<SecurityMetrics | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState<{ summary: string; points: string[]; source: 'ai' | 'fallback' } | null>(null);
+  const [explaining, setExplaining] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -79,7 +82,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
       setError(null);
 
       // Log security event
-      await authProvider.logSecurityEvent('security_scan_initiated', {
+      await authProvider.recordActivityEvent('security_scan_initiated', {
         timestamp: new Date(),
         userId: user.id
       });
@@ -106,9 +109,11 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
       }
 
       setMetrics(response.data.security);
+      setProductId(response.data.product?.id ?? null);
+      setExplanation(null);
       
       // Log successful analysis
-      await authProvider.logSecurityEvent('security_scan_completed', {
+      await authProvider.recordActivityEvent('security_scan_completed', {
         timestamp: new Date(),
         userId: user.id,
         riskScore: response.data.security.riskScore,
@@ -128,7 +133,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
       
       // Log error event
       if (user) {
-        await authProvider.logSecurityEvent('security_scan_failed', {
+        await authProvider.recordActivityEvent('security_scan_failed', {
           timestamp: new Date(),
           userId: user.id,
           error: errorMessage
@@ -138,6 +143,29 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
       onNotification('error', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Ask the background to explain the current rating in plain language.
+  // With the user's own Gemini key (Settings) the explanation is written
+  // by AI; without one it is the built-in template — either way the
+  // response says which via `source`.
+  const fetchExplanation = async () => {
+    if (!productId) return;
+    try {
+      setExplaining(true);
+      const response = await chrome.runtime.sendMessage({
+        type: 'EXPLAIN_RISK',
+        productId
+      });
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to explain rating');
+      }
+      setExplanation(response.data);
+    } catch (err) {
+      onNotification('error', 'Could not generate an explanation');
+    } finally {
+      setExplaining(false);
     }
   };
 
@@ -176,9 +204,19 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
     try {
       setSecuritySettings(newSettings);
       
-      // Save settings via auth provider
+      // Save settings via auth provider, mapped onto its UserPreferences
+      // shape (which has no securitySettings group): real-time scanning is
+      // the marketplace auto-analyze toggle and automatic blocking is
+      // hide-high-risk. The tier-derived toggles (advancedThreatDetection,
+      // detailedReports) follow the user's security level and stay
+      // session-local.
+      const current = authProvider.getCurrentUser()?.preferences;
       await authProvider.updateUserPreferences({
-        securitySettings: newSettings
+        marketplace: {
+          defaultRiskTolerance: current?.marketplace.defaultRiskTolerance ?? 'medium',
+          autoAnalyze: newSettings.realTimeScanning,
+          hideHighRisk: newSettings.automaticBlocking
+        }
       });
       
       onNotification('success', 'Security settings updated');
@@ -192,18 +230,18 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
     }
   };
 
-  const getRiskScoreColor = (score: number): 'success' | 'warning' | 'danger' => {
+  const getRiskScoreColor = (score: number): 'success' | 'warning' | 'error' => {
     if (score >= 80) return 'success';
     if (score >= 60) return 'warning';
-    return 'danger';
+    return 'error';
   };
 
-  const getThreatSeverityColor = (severity: string): 'success' | 'warning' | 'danger' => {
+  const getThreatSeverityColor = (severity: string): 'success' | 'warning' | 'error' => {
     switch (severity) {
       case 'low': return 'success';
       case 'medium': return 'warning';
       case 'high':
-      case 'critical': return 'danger';
+      case 'critical': return 'error';
       default: return 'warning';
     }
   };
@@ -213,7 +251,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
   if (!user) {
     return (
       <div className={styles.section}>
-        <Alert type="info" title="Authentication Required">
+        <Alert variant="info" title="Authentication Required">
           Please log in to access security protection features.
         </Alert>
       </div>
@@ -230,7 +268,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
           </Badge>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => setShowSettings(true)}
             aria-label="Security settings"
           >
@@ -238,7 +276,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
           </Button>
           <Button
             variant="secondary"
-            size="small"
+            size="sm"
             onClick={fetchSecurityMetrics}
             disabled={loading}
             aria-label="Refresh analysis"
@@ -249,9 +287,9 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
       </div>
 
       {loading && (
-        <Card variant="outline">
+        <Card variant="outlined">
           <div className={styles.loadingContainer}>
-            <Loading variant="spinner" size="medium" />
+            <Loading variant="spinner" size="md" />
             <p>Analyzing security metrics...</p>
           </div>
         </Card>
@@ -259,10 +297,10 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
 
       {error && (
         <Alert 
-          type="error" 
+          variant="error" 
           title="Analysis Failed"
-          action={
-            <Button size="small" onClick={fetchSecurityMetrics}>
+          actions={
+            <Button size="sm" onClick={fetchSecurityMetrics}>
               Retry
             </Button>
           }
@@ -279,7 +317,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
               <div className={styles.metricHeader}>
                 <h3>Risk Assessment</h3>
                 {user.securityLevel === 'premium' && (
-                  <Badge variant="success" size="small">AI Enhanced</Badge>
+                  <Badge variant="success" size="sm">AI Enhanced</Badge>
                 )}
               </div>
               <div className={styles.scoreContainer}>
@@ -299,7 +337,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
             <Card variant="elevated" className={styles.metricCard}>
               <div className={styles.metricHeader}>
                 <h3>Seller Trust</h3>
-                <Badge variant="primary" size="small">Verified</Badge>
+                <Badge variant="primary" size="sm">Verified</Badge>
               </div>
               <div className={styles.scoreContainer}>
                 <div className={`${styles.scoreCircle} ${styles[getRiskScoreColor(metrics.sellerTrust)]}`}>
@@ -316,18 +354,49 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
             </Card>
           </div>
 
+          {/* Plain-language explanation of the rating */}
+          <Card variant="outlined" className={styles.explanationCard}>
+            <div className={styles.cardHeader}>
+              <h3>Why this rating?</h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={fetchExplanation}
+                disabled={!productId || explaining}
+                loading={explaining}
+              >
+                Explain in plain language
+              </Button>
+            </div>
+            {explanation && (
+              <div className={styles.explanationContent}>
+                <p>{explanation.summary}</p>
+                <ul>
+                  {explanation.points.map((point, index) => (
+                    <li key={index}>{point}</li>
+                  ))}
+                </ul>
+                <p className={styles.explanationSource}>
+                  {explanation.source === 'ai'
+                    ? 'Written by AI using your own Gemini key, from the signals above.'
+                    : 'Built-in explanation from the signals above. Add your own Gemini key in Settings to have AI write it instead.'}
+                </p>
+              </div>
+            )}
+          </Card>
+
           {/* Security Alerts */}
           {metrics.warnings.length > 0 ? (
-            <Card variant="danger" className={styles.alertsCard}>
+            <Card variant="filled" className={styles.alertsCard}>
               <div className={styles.cardHeader}>
                 <h3>Security Alerts</h3>
-                <Badge variant="danger">{metrics.warnings.length}</Badge>
+                <Badge variant="error">{metrics.warnings.length}</Badge>
               </div>
               <div className={styles.alertsList}>
                 {metrics.warnings.map((warning, index) => (
                   <Alert 
                     key={index}
-                    type="warning"
+                    variant="warning"
                     title="Security Concern"
                     className={styles.alertItem}
                   >
@@ -337,7 +406,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
               </div>
             </Card>
           ) : (
-            <Card variant="success" className={styles.safeCard}>
+            <Card variant="filled" className={styles.safeCard}>
               <div className={styles.safeContent}>
                 <span className={styles.safeIcon}>🛡️</span>
                 <div>
@@ -350,12 +419,12 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
 
           {/* Threat History (Premium/Enhanced users only) */}
           {user.securityLevel !== 'basic' && threatHistory.length > 0 && (
-            <Card variant="outline">
+            <Card variant="outlined">
               <div className={styles.cardHeader}>
                 <h3>Recent Threats Blocked</h3>
                 <Button
                   variant="link"
-                  size="small"
+                  size="sm"
                   onClick={() => setShowThreatDetails(true)}
                 >
                   View All
@@ -366,7 +435,7 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
                   <div key={threat.id} className={styles.threatItem}>
                     <Badge 
                       variant={getThreatSeverityColor(threat.severity)}
-                      size="small"
+                      size="sm"
                     >
                       {threat.type}
                     </Badge>
@@ -384,23 +453,23 @@ const EnhancedProtectSection: React.FC<EnhancedProtectSectionProps> = ({
 
           {/* Premium Features */}
           {user.securityLevel === 'premium' && (
-            <Card variant="primary" className={styles.premiumCard}>
+            <Card variant="filled" className={styles.premiumCard}>
               <h3>Premium Security Features</h3>
               <div className={styles.featureGrid}>
                 <div className={styles.feature}>
                   <span className={styles.featureIcon}>🤖</span>
                   <span>AI Threat Detection</span>
-                  <Badge variant="success" size="small">Active</Badge>
+                  <Badge variant="success" size="sm">Active</Badge>
                 </div>
                 <div className={styles.feature}>
                   <span className={styles.featureIcon}>🔒</span>
                   <span>Real-time Protection</span>
-                  <Badge variant="success" size="small">Active</Badge>
+                  <Badge variant="success" size="sm">Active</Badge>
                 </div>
                 <div className={styles.feature}>
                   <span className={styles.featureIcon}>📊</span>
                   <span>Detailed Reports</span>
-                  <Badge variant="success" size="small">Active</Badge>
+                  <Badge variant="success" size="sm">Active</Badge>
                 </div>
               </div>
             </Card>
@@ -455,10 +524,10 @@ const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
       title="Security Settings"
       isOpen={true}
       onClose={onClose}
-      size="medium"
+      size="md"
     >
       <div className={styles.settingsContent}>
-        <Card variant="outline">
+        <Card variant="outlined">
           <h3>Protection Settings</h3>
           <div className={styles.settingsGrid}>
             <div className={styles.settingItem}>
@@ -480,7 +549,7 @@ const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 <span>Advanced Threat Detection</span>
                 <p>AI-powered threat analysis</p>
                 {userLevel === 'basic' && (
-                  <Badge variant="warning" size="small">Premium Feature</Badge>
+                  <Badge variant="warning" size="sm">Premium Feature</Badge>
                 )}
               </div>
               <Toggle
@@ -512,7 +581,7 @@ const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 <span>Detailed Reports</span>
                 <p>Comprehensive security analytics</p>
                 {userLevel !== 'premium' && (
-                  <Badge variant="warning" size="small">Premium Only</Badge>
+                  <Badge variant="warning" size="sm">Premium Only</Badge>
                 )}
               </div>
               <Toggle
@@ -555,11 +624,11 @@ const ThreatDetailsModal: React.FC<ThreatDetailsModalProps> = ({
       title="Threat History"
       isOpen={true}
       onClose={onClose}
-      size="large"
+      size="lg"
     >
       <div className={styles.threatDetailsContent}>
         {threats.map((threat) => (
-          <Card key={threat.id} variant="outline" className={styles.threatDetailCard}>
+          <Card key={threat.id} variant="outlined" className={styles.threatDetailCard}>
             <div className={styles.threatDetailHeader}>
               <div>
                 <Badge variant={getThreatSeverityColor(threat.severity)}>
@@ -598,12 +667,12 @@ const ThreatDetailsModal: React.FC<ThreatDetailsModalProps> = ({
   );
 };
 
-const getThreatSeverityColor = (severity: string): 'success' | 'warning' | 'danger' => {
+const getThreatSeverityColor = (severity: string): 'success' | 'warning' | 'error' => {
   switch (severity) {
     case 'low': return 'success';
     case 'medium': return 'warning';
     case 'high':
-    case 'critical': return 'danger';
+    case 'critical': return 'error';
     default: return 'warning';
   }
 };

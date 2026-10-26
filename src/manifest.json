@@ -6,16 +6,18 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs",
+    "notifications"
   ],
   "host_permissions": [
     "*://*.temu.com/*",
     "*://*.aliexpress.com/*",
-    "*://*.dhgate.com/*"
+    "*://*.dhgate.com/*",
+    "*://generativelanguage.googleapis.com/*"
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {

@@ -39,27 +39,27 @@ export class SecurityUtils {
       return {} as T;
     }
 
-    const result = { ...obj };
+    const result: Record<string, any> = { ...obj };
 
     for (const key in result) {
       if (Object.prototype.hasOwnProperty.call(result, key)) {
         const value = result[key];
-        
+
         if (typeof value === 'string') {
           result[key] = this.sanitizeInput(value);
         } else if (value && typeof value === 'object' && !Array.isArray(value)) {
           result[key] = this.sanitizeObject(value);
         } else if (Array.isArray(value)) {
-          result[key] = value.map(item => 
-            typeof item === 'string' 
-              ? this.sanitizeInput(item) 
+          result[key] = value.map((item: any) =>
+            typeof item === 'string'
+              ? this.sanitizeInput(item)
               : (typeof item === 'object' ? this.sanitizeObject(item) : item)
           );
         }
       }
     }
 
-    return result;
+    return result as T;
   }
 
   /**

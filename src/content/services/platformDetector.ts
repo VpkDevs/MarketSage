@@ -1,15 +1,13 @@
-import { PlatformConfig } from '../../common/types';
+import { PlatformConfig, Platform } from '../../common/types';
 import { ErrorHandler, ErrorSeverity, ErrorCategory } from '../../common/errors/ErrorHandler';
 
 /**
- * Supported marketplace platforms
+ * Supported marketplace platforms.
+ * The canonical Platform enum lives in common/types; it is re-exported here
+ * because this module historically defined it and existing imports
+ * (tests, priceExtractor) reference it from this path.
  */
-export enum Platform {
-  TEMU = 'temu',
-  ALIEXPRESS = 'aliexpress',
-  DHGATE = 'dhgate',
-  UNKNOWN = 'unknown'
-}
+export { Platform };
 
 /**
  * Platform configuration registry
@@ -19,7 +17,7 @@ const PLATFORM_CONFIGS: Record<Platform, PlatformConfig> = {
     name: Platform.TEMU,
     baseUrl: 'temu.com',
     selectors: {
-      price: '.price-current, .product-price, .actual-price',
+      price: '.product-price, .actual-price',
       title: '.product-title, .item-title',
       seller: '.seller-name, .store-name',
       shipping: '.shipping-info, .delivery-info',
@@ -53,7 +51,7 @@ const PLATFORM_CONFIGS: Record<Platform, PlatformConfig> = {
     name: Platform.DHGATE,
     baseUrl: 'dhgate.com',
     selectors: {
-      price: '.price, .price-now',
+      price: '.price-now',
       title: '.product-name',
       seller: '.seller-info, .store-info-name',
       shipping: '.shipping-cost, .shipping-section',

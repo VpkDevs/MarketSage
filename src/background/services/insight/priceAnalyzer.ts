@@ -22,14 +22,29 @@ export class PriceAnalyzer {
   };
 
   async analyzePrices(product: Product): Promise<PriceAnalytics> {
-    const historicalData = await Storage.getPriceHistory(product.id);
-    const marketComparison = await this.getMarketComparison(product);
-    
+    // Compose the declared PriceAnalytics shape from this class's
+    // existing building blocks (this method previously called four
+    // helper methods that never existed on the class).
+    const history = await this.getPriceHistory(product.id);
+    const marketAverage = await this.calculateMarketAverage(product);
+    const valueScore = this.calculateValueScore(product.price.current, marketAverage, product);
+    const trend = this.analyzePriceTrend(history);
+
     return {
-      anomalyScore: this.calculateAnomalyScore(product.price, historicalData),
-      marketPosition: this.calculateMarketPosition(product.price, marketComparison),
-      priceHistory: historicalData,
-      recommendations: this.generatePriceRecommendations(product, marketComparison)
+      currentPrice: product.price.current,
+      marketAverage,
+      priceHistory: history.map(entry => ({
+        price: entry.current,
+        timestamp: entry.timestamp
+      })),
+      valueScore,
+      trend,
+      recommendations: this.generateRecommendations(
+        product.price.current,
+        marketAverage,
+        valueScore,
+        trend
+      )
     };
   }
 
@@ -65,7 +80,7 @@ export class PriceAnalyzer {
     let score = marketAverage / currentPrice;
 
     // Adjust for product quality factors
-    if (product.seller.rating) {
+    if (product.seller?.rating) {
       score *= (1 + (product.seller.rating - 3) * 0.1); // Adjust ±10% per rating point from 3
     }
 

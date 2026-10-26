@@ -1,3 +1,5 @@
+import { Product, Seller, Price, Platform } from '../../../src/common/types';
+
 const chrome = {
   storage: {
     local: {
@@ -76,6 +78,53 @@ const chrome = {
   browser: {},
 };
 
-global.chrome = chrome;
+global.chrome = chrome as any;
 
 export {};
+
+// Test data generators. These existed in this module historically and were
+// removed in a later commit while suites still imported them
+// (securityAnalyzer.test.ts, ProtectSection.test.tsx) — restored against
+// the current common/types shapes.
+export const createMockProduct = (overrides?: Partial<Product>): Product => ({
+  id: 'test-product-1',
+  title: 'Test Product',
+  description: 'A test product description',
+  price: {
+    current: 29.99,
+    original: 39.99,
+    currency: 'USD'
+  },
+  images: ['image1.jpg', 'image2.jpg'],
+  seller: {
+    id: 'seller-1',
+    name: 'Test Seller',
+    rating: 4.5,
+    totalSales: 1000
+  },
+  platform: Platform.TEMU,
+  url: 'https://www.temu.com/test-product',
+  ...overrides
+});
+
+export const createMockSeller = (overrides?: Partial<Seller>): Seller => ({
+  id: 'seller-1',
+  name: 'Test Seller',
+  rating: 4.5,
+  totalSales: 1000,
+  ...overrides
+});
+
+export const createMockPrice = (overrides?: Partial<Price>): Price => ({
+  current: 29.99,
+  original: 39.99,
+  currency: 'USD',
+  ...overrides
+});
+
+// DOM test utilities
+export const createMockElement = (innerHTML: string): HTMLElement => {
+  const div = document.createElement('div');
+  div.innerHTML = innerHTML;
+  return div;
+};

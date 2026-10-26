@@ -66,8 +66,7 @@ describe('End-to-End User Scenarios', () => {
             id: 'ali1',
             title: 'AliExpress Normal Product',
             description: 'A normal product with regular pricing',
-            price: { current: 49.99, original: 59.99, currency: 'USD' },
-            market: 50.00,
+            price: { current: 49.99, original: 59.99, currency: 'USD', market: 50.00 },
             platform: Platform.ALIEXPRESS,
             seller: { id: 'seller1', rating: 4.8 },
             images: ['image1.jpg', 'image2.jpg']
@@ -76,8 +75,7 @@ describe('End-to-End User Scenarios', () => {
             id: 'ali2',
             title: 'AliExpress Suspicious Product',
             description: 'A product with suspiciously low pricing',
-            price: { current: 9.99, original: 99.99, currency: 'USD' },
-            market: 95.00,
+            price: { current: 9.99, original: 99.99, currency: 'USD', market: 95.00 },
             platform: Platform.ALIEXPRESS,
             seller: { id: 'seller2', rating: 4.9 },
             images: ['image3.jpg', 'image4.jpg']
@@ -89,8 +87,7 @@ describe('End-to-End User Scenarios', () => {
             id: 'temu1',
             title: 'Temu Normal Product',
             description: 'A normal product with regular pricing',
-            price: { current: 29.99, original: 34.99, currency: 'USD' },
-            market: 32.00,
+            price: { current: 29.99, original: 34.99, currency: 'USD', market: 32.00 },
             platform: Platform.TEMU,
             seller: { id: 'seller3', rating: 4.7 },
             images: ['image5.jpg', 'image6.jpg']

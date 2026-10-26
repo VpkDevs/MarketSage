@@ -45,6 +45,6 @@ export class CrossPlatformVerifier {
   private mockIsCounterfeit(product: Product): boolean {
     // This is a mock implementation
     // In a real implementation, this would use more sophisticated analysis
-    return product.price.current < 50 && product.brand?.toLowerCase().includes('luxury');
+    return product.price.current < 50 && (product.brand?.toLowerCase().includes('luxury') ?? false);
   }
 }

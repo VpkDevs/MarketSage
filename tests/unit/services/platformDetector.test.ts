@@ -86,15 +86,18 @@ describe('PlatformDetector', () => {
     });
   });
 
-  describe('validateUrl', () => {
+  // The public API for "is this URL on any supported platform" is
+  // isSupportedUrl(); validateUrl(url, baseUrl) is a private per-platform
+  // helper. These cases assert the same URLs and outcomes as before.
+  describe('isSupportedUrl', () => {
     it('should validate supported platform URLs', () => {
-      expect(detector.validateUrl('https://www.temu.com/product')).toBe(true);
-      expect(detector.validateUrl('https://www.aliexpress.com/item')).toBe(true);
-      expect(detector.validateUrl('https://www.dhgate.com/product')).toBe(true);
+      expect(detector.isSupportedUrl('https://www.temu.com/product')).toBe(true);
+      expect(detector.isSupportedUrl('https://www.aliexpress.com/item')).toBe(true);
+      expect(detector.isSupportedUrl('https://www.dhgate.com/product')).toBe(true);
     });
 
     it('should invalidate unsupported platform URLs', () => {
-      expect(detector.validateUrl('https://www.unsupported.com')).toBe(false);
+      expect(detector.isSupportedUrl('https://www.unsupported.com')).toBe(false);
     });
   });
 });

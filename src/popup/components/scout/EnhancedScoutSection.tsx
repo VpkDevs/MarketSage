@@ -108,7 +108,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       setError(null);
 
       // Log discovery event
-      await authProvider.logSecurityEvent('product_discovery_initiated', {
+      await authProvider.recordActivityEvent('product_discovery_initiated', {
         timestamp: new Date(),
         userId: user.id,
         searchQuery: query || 'auto'
@@ -211,7 +211,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       setScoutData(mockScoutData);
 
       // Log successful discovery
-      await authProvider.logSecurityEvent('product_discovery_completed', {
+      await authProvider.recordActivityEvent('product_discovery_completed', {
         timestamp: new Date(),
         userId: user.id,
         resultsFound: mockRecommendations.length,
@@ -226,7 +226,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       console.error('Enhanced ScoutSection Error:', err);
       
       if (user) {
-        await authProvider.logSecurityEvent('product_discovery_failed', {
+        await authProvider.recordActivityEvent('product_discovery_failed', {
           timestamp: new Date(),
           userId: user.id,
           error: errorMessage
@@ -265,7 +265,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       onNotification('success', 'Added to watchlist');
       
       if (user) {
-        await authProvider.logSecurityEvent('product_watchlist_added', {
+        await authProvider.recordActivityEvent('product_watchlist_added', {
           timestamp: new Date(),
           userId: user.id,
           productId: product.id,
@@ -286,7 +286,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       onNotification('success', 'Removed from watchlist');
       
       if (user) {
-        await authProvider.logSecurityEvent('product_watchlist_removed', {
+        await authProvider.recordActivityEvent('product_watchlist_removed', {
           timestamp: new Date(),
           userId: user.id,
           productId: productId
@@ -304,11 +304,11 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
     }
   };
 
-  const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'danger' => {
+  const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'error' => {
     switch (availability) {
       case 'in_stock': return 'success';
       case 'low_stock': return 'warning';
-      case 'out_of_stock': return 'danger';
+      case 'out_of_stock': return 'error';
       default: return 'warning';
     }
   };
@@ -328,7 +328,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
   if (!user) {
     return (
       <div className={styles.section}>
-        <Alert type="info" title="Authentication Required">
+        <Alert variant="info" title="Authentication Required">
           Please log in to access product discovery and recommendations.
         </Alert>
       </div>
@@ -345,7 +345,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
           </Badge>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => setShowFilters(true)}
             aria-label="Search filters"
           >
@@ -353,7 +353,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
           </Button>
           <Button
             variant="secondary"
-            size="small"
+            size="sm"
             onClick={() => fetchRecommendations()}
             disabled={loading}
             aria-label="Refresh recommendations"
@@ -364,7 +364,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       </div>
 
       {/* Search Bar */}
-      <Card variant="outline" className={styles.searchCard}>
+      <Card variant="outlined" className={styles.searchCard}>
         <form onSubmit={handleSearch} className={styles.searchForm}>
           <Input
             type="text"
@@ -390,9 +390,9 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       </Card>
 
       {loading && (
-        <Card variant="outline">
+        <Card variant="outlined">
           <div className={styles.loadingContainer}>
-            <Loading variant="dots" size="medium" />
+            <Loading variant="dots" size="md" />
             <p>Discovering products...</p>
           </div>
         </Card>
@@ -400,10 +400,10 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
 
       {error && (
         <Alert 
-          type="error" 
+          variant="error" 
           title="Discovery Failed"
-          action={
-            <Button size="small" onClick={() => fetchRecommendations()}>
+          actions={
+            <Button size="sm" onClick={() => fetchRecommendations()}>
               Retry
             </Button>
           }
@@ -415,7 +415,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
       {!loading && !error && scoutData && (
         <>
           {/* Results Summary */}
-          <Card variant="outline" className={styles.resultsSummary}>
+          <Card variant="outlined" className={styles.resultsSummary}>
             <div className={styles.summaryContent}>
               <span>Found <strong>{scoutData.totalResults}</strong> products for "{scoutData.searchQuery}"</span>
               <span>Search completed in {scoutData.searchTime}s</span>
@@ -426,7 +426,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
           <Tabs
             items={scoutTabs}
             activeTab={activeScoutTab}
-            onTabChange={setActiveScoutTab}
+            onChange={(tabId: string) => setActiveScoutTab(tabId as typeof activeScoutTab)}
             variant="pills"
           />
 
@@ -459,7 +459,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
                     />
                   ))}
                 {scoutData.recommendations.filter(p => p.discount && p.discount > 0).length === 0 && (
-                  <Card variant="outline">
+                  <Card variant="outlined">
                     <div className={styles.emptyState}>
                       <span className={styles.emptyIcon}>💸</span>
                       <h3>No Active Deals</h3>
@@ -480,7 +480,7 @@ const EnhancedScoutSection: React.FC<EnhancedScoutSectionProps> = ({
                   />
                 ))}
                 {watchlist.length === 0 && (
-                  <Card variant="outline">
+                  <Card variant="outlined">
                     <div className={styles.emptyState}>
                       <span className={styles.emptyIcon}>👁️</span>
                       <h3>Empty Watchlist</h3>
@@ -529,7 +529,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <Card variant="elevated" className={styles.productCard}>
       {product.isSponsoredDeal && (
-        <Badge variant="warning" size="small" className={styles.sponsoredBadge}>
+        <Badge variant="warning" size="sm" className={styles.sponsoredBadge}>
           Sponsored
         </Badge>
       )}
@@ -537,7 +537,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <div className={styles.productImage}>
         <img src={product.imageUrl} alt={product.name} />
         {product.discount && (
-          <Badge variant="danger" className={styles.discountBadge}>
+          <Badge variant="error" className={styles.discountBadge}>
             -{product.discount}%
           </Badge>
         )}
@@ -562,7 +562,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className={styles.productMeta}>
           <Badge 
             variant={getAvailabilityColor(product.availability)}
-            size="small"
+            size="sm"
           >
             {product.availability.replace('_', ' ')}
           </Badge>
@@ -571,7 +571,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         
         {userLevel === 'premium' && (
           <div className={styles.aiInsights}>
-            <Badge variant="primary" size="small">
+            <Badge variant="primary" size="sm">
               {product.similarityScore}% match
             </Badge>
           </div>
@@ -580,14 +580,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className={styles.productActions}>
           <Button 
             variant="primary" 
-            size="small"
+            size="sm"
             onClick={() => window.open(product.productUrl, '_blank')}
           >
             View Product
           </Button>
           <Button
             variant={isInWatchlist ? "secondary" : "ghost"}
-            size="small"
+            size="sm"
             onClick={() => onAddToWatchlist(product)}
             disabled={isInWatchlist}
           >
@@ -612,9 +612,9 @@ const DealCard: React.FC<DealCardProps> = ({ product, onAddToWatchlist, isInWatc
   const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
 
   return (
-    <Card variant="danger" className={styles.dealCard}>
+    <Card variant="filled" className={styles.dealCard}>
       <div className={styles.dealHeader}>
-        <Badge variant="danger">🔥 {product.discount}% OFF</Badge>
+        <Badge variant="error">🔥 {product.discount}% OFF</Badge>
         {product.dealEndTime && (
           <span className={styles.dealTimer}>
             ⏰ {hoursLeft}h left
@@ -633,12 +633,12 @@ const DealCard: React.FC<DealCardProps> = ({ product, onAddToWatchlist, isInWatc
         </div>
         
         <div className={styles.dealActions}>
-          <Button variant="danger" size="small" fullWidth>
+          <Button variant="danger" size="sm" fullWidth>
             Grab Deal
           </Button>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => onAddToWatchlist(product)}
             disabled={isInWatchlist}
           >
@@ -658,7 +658,7 @@ interface WatchlistCardProps {
 
 const WatchlistCard: React.FC<WatchlistCardProps> = ({ product, onRemoveFromWatchlist }) => {
   return (
-    <Card variant="outline" className={styles.watchlistCard}>
+    <Card variant="outlined" className={styles.watchlistCard}>
       <div className={styles.watchlistContent}>
         <div className={styles.watchlistInfo}>
           <h4>{product.name}</h4>
@@ -669,14 +669,14 @@ const WatchlistCard: React.FC<WatchlistCardProps> = ({ product, onRemoveFromWatc
         <div className={styles.watchlistActions}>
           <Button 
             variant="primary" 
-            size="small"
+            size="sm"
             onClick={() => window.open(product.productUrl, '_blank')}
           >
             View
           </Button>
           <Button
             variant="danger"
-            size="small"
+            size="sm"
             onClick={() => onRemoveFromWatchlist(product.id)}
           >
             ❌
@@ -706,10 +706,10 @@ const FiltersModal: React.FC<FiltersModalProps> = ({ filters, onSave, onClose })
       title="Search Filters"
       isOpen={true}
       onClose={onClose}
-      size="medium"
+      size="md"
     >
       <div className={styles.filtersContent}>
-        <Card variant="outline">
+        <Card variant="outlined">
           <h3>Price Range</h3>
           <div className={styles.priceRange}>
             <Input
@@ -733,7 +733,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({ filters, onSave, onClose })
           </div>
         </Card>
 
-        <Card variant="outline">
+        <Card variant="outlined">
           <h3>Options</h3>
           <div className={styles.filterOptions}>
             <label className={styles.filterOption}>
@@ -775,11 +775,11 @@ const FiltersModal: React.FC<FiltersModalProps> = ({ filters, onSave, onClose })
   );
 };
 
-const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'danger' => {
+const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'error' => {
   switch (availability) {
     case 'in_stock': return 'success';
     case 'low_stock': return 'warning';
-    case 'out_of_stock': return 'danger';
+    case 'out_of_stock': return 'error';
     default: return 'warning';
   }
 };

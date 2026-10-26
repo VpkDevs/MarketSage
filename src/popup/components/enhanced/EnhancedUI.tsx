@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styles from './EnhancedUI.module.css';
+import styles from '../../styles/EnhancedUI.module.css';
 
 // ============================================================================
 // FOUNDATIONAL COMPONENTS
@@ -85,6 +85,13 @@ export interface InputProps {
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  /** Optional inline action button rendered at the right edge of the
+   *  input (e.g. a show/hide password toggle). */
+  action?: {
+    icon: React.ReactNode;
+    onClick: () => void;
+    'aria-label'?: string;
+  };
   size?: 'sm' | 'md' | 'lg';
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
@@ -105,6 +112,7 @@ export const Input: React.FC<InputProps> = ({
   fullWidth = false,
   icon,
   iconPosition = 'left',
+  action,
   size = 'md',
   onChange,
   onFocus,
@@ -166,6 +174,18 @@ export const Input: React.FC<InputProps> = ({
         
         {icon && iconPosition === 'right' && (
           <div className={styles.inputIcon}>{icon}</div>
+        )}
+
+        {action && (
+          <button
+            type="button"
+            className={styles.inputIcon}
+            onClick={action.onClick}
+            aria-label={action['aria-label']}
+            disabled={disabled}
+          >
+            {action.icon}
+          </button>
         )}
       </div>
       

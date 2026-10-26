@@ -1,27 +1,40 @@
 # WHAT AM I?
 
-**Project Name:** Market Oracle
+**Project Name:** MarketSage
 **Original Name:** market-sage
 
 ## Purpose
-AI-powered market analysis and investment insights platform
+A Chrome extension that protects shoppers on Chinese marketplaces:
+it detects scam signals and pricing manipulation on product pages and
+explains its findings in plain language.
 
 ## Category/Space
-Financial Analytics
+Browser extension — e-commerce safety / shopping assistant
 
 ## Positioning
-Innovative solution in the financial analytics market.
+A shopping-protection layer for cross-border marketplaces, where
+language barriers, unfamiliar sellers, and aggressive discount tactics
+make it hard to judge whether a listing is legitimate.
 
 ## Target Market
-- Financial Analytics professionals and enthusiasts
-- Users seeking advanced automation and intelligence
-- Businesses looking for specialized solutions
+- Shoppers buying from Temu, AliExpress, and DHgate
+- Bargain hunters exposed to too-good-to-be-true listings
+- Resellers/arbitrageurs screening large numbers of listings
 
 ## Competitors
-Bloomberg Terminal, TradingView, Yahoo Finance
+Marketplace built-in trust badges, general safe-browsing tools, and
+price-tracking extensions (e.g. Keepa-style history trackers) — none of
+which combine scam-signal scoring with price analysis for these three
+marketplaces.
 
 ## Tech Stack
-Financial analytics platform
+TypeScript, React 18 (popup), Manifest V3 service worker, content
+scripts for page extraction, webpack 5, jest.
+Scam detection is a deterministic weighted-heuristic model running
+locally; optional AI explanations use the user's own Google Gemini API
+key (bring-your-own-key, with a built-in no-key fallback).
 
 ## Status
-Active development
+Working build: production webpack build produces a loadable extension
+in dist/, and the full jest suite passes. See README.md for features,
+install steps, and known limitations.

@@ -4,7 +4,8 @@ export * from './types/scamDetection';
 export enum Platform {
   ALIEXPRESS = 'aliexpress',
   TEMU = 'temu',
-  DHGATE = 'dhgate'
+  DHGATE = 'dhgate',
+  UNKNOWN = 'unknown'
 }
 
 export interface Price {
@@ -19,6 +20,7 @@ export interface Seller {
   id: string;
   name?: string;
   rating?: number;
+  totalSales?: number;
   reviewCount?: number;
   joinDate?: Date;
   responseRate?: number;
@@ -39,6 +41,26 @@ export interface Product {
   categoryId?: string;
   brand?: string;
   specifications?: Record<string, string | number>;
+}
+
+// Platform Configuration (per-marketplace selectors and endpoints).
+// This is the single definition; common/types/index.ts re-exports it.
+export interface PlatformConfig {
+  name: Platform;
+  baseUrl: string;
+  selectors: {
+    price: string;
+    title: string;
+    seller: string;
+    shipping: string;
+    description: string;
+    specifications: string;
+  };
+  apiEndpoints?: {
+    search?: string;
+    product?: string;
+    seller?: string;
+  };
 }
 
 export interface Category {

@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable } from 'rxjs';
-import { AppState, RiskLevel } from '../types';
+import { AppState, RiskLevel } from '../types/index';
 import { ErrorHandler, ErrorCategory, ErrorSeverity } from '../errors/ErrorHandler';
 
 /**

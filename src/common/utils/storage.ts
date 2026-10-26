@@ -1,5 +1,5 @@
 import { Product, Price } from '../types';
-import { UserScamDetectionPreferences } from '../models/scamDetection/userPreferences';
+import { UserScamDetectionPreferences, CheckoutSession } from '../types';
 
 export class Storage {
   private static readonly PRICE_HISTORY_KEY = 'price_history';
@@ -117,13 +117,13 @@ export class Storage {
   }
 
   // Checkout Session Methods
-  static async saveCheckoutSession(session: any): Promise<void> {
+  static async saveCheckoutSession(session: CheckoutSession): Promise<void> {
     await chrome.storage.local.set({
       [`${this.CHECKOUT_SESSION_KEY}_${session.sessionId}`]: session
     });
   }
 
-  static async getCheckoutSession(sessionId: string): Promise<any | null> {
+  static async getCheckoutSession(sessionId: string): Promise<CheckoutSession | null> {
     const result = await chrome.storage.local.get(`${this.CHECKOUT_SESSION_KEY}_${sessionId}`);
     return result[`${this.CHECKOUT_SESSION_KEY}_${sessionId}`] || null;
   }
@@ -154,6 +154,76 @@ export class Storage {
     await chrome.storage.local.set({
       [this.CURRENT_USER_KEY]: user
     });
+  }
+
+  // Auth Persistence Methods (users, sessions, security events, device id)
+  // Used by core/auth/EnhancedAuthProvider. Records are stored as plain
+  // objects in chrome.storage.local, mirroring the checkout-session style.
+
+  private static readonly AUTH_USERS_KEY = 'auth_users';
+  private static readonly AUTH_SESSION_KEY_PREFIX = 'auth_session_';
+  private static readonly SECURITY_EVENTS_KEY = 'security_events';
+  private static readonly DEVICE_ID_KEY = 'device_id';
+
+  static async getUserByIdentifier(identifier: string): Promise<any | null> {
+    const result = await chrome.storage.local.get(this.AUTH_USERS_KEY);
+    const users: any[] = result[this.AUTH_USERS_KEY] || [];
+    return (
+      users.find(
+        (u) => u.id === identifier || u.email === identifier || u.username === identifier
+      ) || null
+    );
+  }
+
+  static async createUser(user: any): Promise<void> {
+    const result = await chrome.storage.local.get(this.AUTH_USERS_KEY);
+    const users: any[] = result[this.AUTH_USERS_KEY] || [];
+    const existingIndex = users.findIndex((u) => u.id === user.id);
+    if (existingIndex >= 0) {
+      users[existingIndex] = user;
+    } else {
+      users.push(user);
+    }
+    await chrome.storage.local.set({ [this.AUTH_USERS_KEY]: users });
+  }
+
+  static async saveSession(session: any): Promise<void> {
+    await chrome.storage.local.set({
+      [`${this.AUTH_SESSION_KEY_PREFIX}${session.sessionId}`]: session
+    });
+  }
+
+  static async getSession(sessionId: string): Promise<any | null> {
+    const key = `${this.AUTH_SESSION_KEY_PREFIX}${sessionId}`;
+    const result = await chrome.storage.local.get(key);
+    return result[key] || null;
+  }
+
+  static async updateSession(session: any): Promise<void> {
+    await this.saveSession(session);
+  }
+
+  static async deleteSession(sessionId: string): Promise<void> {
+    await chrome.storage.local.remove(`${this.AUTH_SESSION_KEY_PREFIX}${sessionId}`);
+  }
+
+  static async saveSecurityEvent(event: any): Promise<void> {
+    const result = await chrome.storage.local.get(this.SECURITY_EVENTS_KEY);
+    const events: any[] = result[this.SECURITY_EVENTS_KEY] || [];
+    events.push(event);
+    // Keep only the most recent 200 events
+    await chrome.storage.local.set({
+      [this.SECURITY_EVENTS_KEY]: events.slice(-200)
+    });
+  }
+
+  static async getDeviceId(): Promise<string | null> {
+    const result = await chrome.storage.local.get(this.DEVICE_ID_KEY);
+    return result[this.DEVICE_ID_KEY] || null;
+  }
+
+  static async setDeviceId(deviceId: string): Promise<void> {
+    await chrome.storage.local.set({ [this.DEVICE_ID_KEY]: deviceId });
   }
 
   // Utility Methods

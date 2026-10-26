@@ -117,24 +117,10 @@ export interface AppState {
   };
 }
 
-// Platform Configuration
-export interface PlatformConfig {
-  name: Platform;
-  baseUrl: string;
-  selectors: {
-    price: string;
-    title: string;
-    seller: string;
-    shipping: string;
-    description: string;
-    specifications: string;
-  };
-  apiEndpoints?: {
-    search?: string;
-    product?: string;
-    seller?: string;
-  };
-}
+// Platform Configuration lives in common/types (its only consumer,
+// content/services/platformDetector, imports it from there). Re-exported
+// here so this module keeps exposing it.
+export type { PlatformConfig } from '../types';
 
 // Service Response Types
 export interface AnalysisResponse {

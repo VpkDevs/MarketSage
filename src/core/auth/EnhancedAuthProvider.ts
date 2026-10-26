@@ -97,9 +97,20 @@ export class EnhancedAuthProvider {
   private loginAttempts: Map<string, { count: number; lastAttempt: number }> = new Map();
   private securityEvents: SecurityEvent[] = [];
 
+  private readonly readyPromise: Promise<void>;
+
   constructor() {
-    this.initializeFromStorage();
+    this.readyPromise = this.initializeFromStorage();
     this.setupSessionMonitoring();
+  }
+
+  /**
+   * Resolves once the initial session restore from storage has finished.
+   * Callers should await this before trusting isAuthenticated() /
+   * getCurrentUser() right after construction.
+   */
+  async whenReady(): Promise<void> {
+    await this.readyPromise;
   }
 
   /**
@@ -411,6 +422,21 @@ export class EnhancedAuthProvider {
    * Get user security events
    */
   @AsyncErrorHandler([])
+  /**
+   * Record a product-flow activity event from the popup sections (scans,
+   * price analyses, discoveries, watchlist changes). These are stored
+   * through the same persistence path as auth security events, under
+   * their own event names.
+   */
+  async recordActivityEvent(type: string, details?: Record<string, any>): Promise<void> {
+    await Storage.saveSecurityEvent({
+      type,
+      userId: details?.userId,
+      timestamp: Date.now(),
+      details
+    });
+  }
+
   async getSecurityEvents(limit: number = 50): Promise<SecurityEvent[]> {
     if (!this.currentUser) {
       return [];

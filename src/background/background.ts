@@ -84,13 +84,16 @@ async function handleTabUpdate(tabId: number, url: string) {
       await chrome.action.setBadgeBackgroundColor({ color: '#FFC107' });
       await chrome.action.setBadgeText({ text: '...' });
 
-      // Analyze the page
+      // Analyze the page (content script responds with the standard
+      // { success, data } envelope; data.security holds the metrics)
       const analysis = await chrome.tabs.sendMessage(tabId, {
         type: 'ANALYZE_CURRENT_PAGE'
       });
+      const security = analysis?.data?.security;
+      if (!security) return;
 
       // Update badge based on analysis results
-      if (analysis.security.riskScore < 50) {
+      if (security.riskScore < 50) {
         await chrome.action.setBadgeBackgroundColor({ color: '#F44336' });
         await chrome.action.setBadgeText({ text: '!' });
       } else {
@@ -99,12 +102,12 @@ async function handleTabUpdate(tabId: number, url: string) {
       }
 
       // Show notification if there are high-risk warnings
-      if (settings.notificationsEnabled && analysis.security.warnings.length > 0) {
+      if (settings.notificationsEnabled && security.warnings.length > 0) {
         chrome.notifications.create({
           type: 'basic',
-          iconUrl: 'icons/icon-128.png',
+          iconUrl: 'icons/icon128.png',
           title: 'MarketSage Security Alert',
-          message: analysis.security.warnings[0], // Show the most important warning
+          message: security.warnings[0], // Show the most important warning
           priority: 2
         });
       }
