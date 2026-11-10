@@ -35,11 +35,18 @@
 }
 
 .content {
-  padding: 16px;
+  padding: 0;
 }
 
 .section {
-  display: none;
+  display: block;
+  padding: 16px;
+}
+
+.section h2 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #212529;
 }
 
 .sectionActive {
@@ -55,7 +62,6 @@
 .protectContent {
   display: grid;
   gap: 16px;
-  padding: 16px;
 }
 
 .metricCard {
@@ -161,5 +167,547 @@
 .insightContent {
   display: grid;
   gap: 16px;
+}
+
+/* --- Shared states ------------------------------------------------------- */
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 10px auto;
+  border: 3px solid #e9ecef;
+  border-top-color: #228be6;
+  border-radius: 50%;
+  animation: marketsage-spin 0.8s linear infinite;
+}
+
+@keyframes marketsage-spin {
+  to { transform: rotate(360deg); }
+}
+
+.error {
+  background: #fff5f5;
+  border: 1px solid #ffc9c9;
+  border-radius: 8px;
   padding: 16px;
+  color: #c92a2a;
+  text-align: center;
+}
+
+.errorText {
+  color: #c92a2a;
+  font-size: 13px;
+  margin: 8px 0 0 0;
+}
+
+.retryButton,
+.primaryButton {
+  background: #228be6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.retryButton:hover,
+.primaryButton:hover {
+  background: #1c7ed6;
+}
+
+.primaryButton:disabled {
+  background: #a5d8ff;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background: transparent;
+  color: #495057;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  background: #f1f3f5;
+}
+
+.secondaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Header / shell ------------------------------------------------------ */
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.logoTitle {
+  margin: 0;
+  font-size: 20px;
+  color: #212529;
+}
+
+.versionBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2b8a3e;
+  background: #ebfbee;
+  border: 1px solid #b2f2bb;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.settingsButton {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.settingsPanel {
+  margin: 16px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f8f9fa;
+}
+
+.settingsPanel h3 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  color: #212529;
+}
+
+.settingsText {
+  font-size: 13px;
+  color: #495057;
+  margin: 0 0 10px 0;
+  line-height: 1.45;
+}
+
+.keyInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.settingsActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* --- Protect ------------------------------------------------------------- */
+
+.warningIcon {
+  margin-right: 8px;
+}
+
+.safeCard {
+  background: #ebfbee;
+  border: 1px solid #b2f2bb;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  color: #2b8a3e;
+}
+
+.safeCard p {
+  margin: 6px 0 0 0;
+}
+
+.safeIcon {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.scoreExcellent { color: #2b8a3e; }
+.scoreGood { color: #66a80f; }
+.scoreFair { color: #f08c00; }
+.scorePoor { color: #e03131; }
+
+.explanationCard {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.explanationCard h3 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.explainButton {
+  background: #2b8a3e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 9px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.explainButton:hover {
+  background: #237032;
+}
+
+.explainButton:disabled {
+  background: #94d3a2;
+  cursor: not-allowed;
+}
+
+.explanationSummary {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #212529;
+  line-height: 1.5;
+}
+
+.explanationList {
+  margin: 0 0 10px 0;
+  padding-left: 18px;
+  color: #495057;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.explanationSource {
+  font-size: 11px;
+  font-weight: 600;
+  color: #868e96;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* --- Insight ------------------------------------------------------------- */
+
+.metricNote {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #868e96;
+  line-height: 1.45;
+}
+
+.historyItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.historyPrice {
+  font-weight: 600;
+  color: #212529;
+}
+
+.historyDate {
+  color: #868e96;
+  font-size: 12px;
+}
+
+.trendCard {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.trendCard h3 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.trend {
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trendRising { color: #e03131; }
+.trendFalling { color: #2b8a3e; }
+.trendStable { color: #868e96; }
+
+.recommendationsCard {
+  background: #ebfbee;
+  border: 1px solid #b2f2bb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.recommendationsCard h3 {
+  margin: 0 0 12px 0;
+  color: #2b8a3e;
+  font-size: 16px;
+}
+
+.recommendationsList {
+  margin: 0;
+  padding-left: 18px;
+  color: #495057;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recommendationItem {
+  padding: 4px 0;
+}
+
+.insightsCard {
+  background: #fff9db;
+  border: 1px solid #ffe066;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.insightsCard h3 {
+  margin: 0 0 12px 0;
+  color: #f08c00;
+  font-size: 16px;
+}
+
+.insightItem {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #ffe066;
+}
+
+.insightItem:last-child {
+  border-bottom: none;
+}
+
+.insightIcon {
+  font-size: 18px;
+}
+
+.insightTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: #212529;
+}
+
+.insightText {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #495057;
+  line-height: 1.45;
+}
+
+/* --- Scout --------------------------------------------------------------- */
+
+.basisNote {
+  font-size: 12px;
+  color: #868e96;
+  line-height: 1.45;
+  margin: 0 0 12px 0;
+}
+
+.searchForm {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.searchButton {
+  background: #228be6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.searchButton:disabled {
+  background: #a5d8ff;
+  cursor: not-allowed;
+}
+
+.filterRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.filterLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #495057;
+}
+
+.filterSelect {
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.modeNote {
+  font-size: 12px;
+  color: #868e96;
+  margin: 0 0 10px 0;
+}
+
+.resultCard {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.resultTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: #212529;
+  margin-bottom: 6px;
+}
+
+.resultMeta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.platformBadge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #1971c2;
+  background: #e7f5ff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.ratingText {
+  font-size: 12px;
+  color: #f08c00;
+}
+
+.relevanceChip {
+  font-size: 11px;
+  color: #868e96;
+}
+
+.resultPriceRow {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.resultPrice {
+  font-size: 18px;
+  font-weight: bold;
+  color: #2b8a3e;
+}
+
+.originalPrice {
+  font-size: 13px;
+  color: #adb5bd;
+  text-decoration: line-through;
+}
+
+.discountBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: #e03131;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.dropNote {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #2b8a3e;
+}
+
+.riseNote {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #e03131;
+}
+
+.resultActions {
+  display: flex;
+  gap: 8px;
+}
+
+.viewButton {
+  background: #228be6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.watchButton {
+  background: transparent;
+  color: #495057;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.watchButtonActive {
+  background: #ebfbee;
+  border-color: #b2f2bb;
+  color: #2b8a3e;
+}
+
+.emptyState {
+  border: 1px dashed #ced4da;
+  border-radius: 8px;
+  padding: 16px;
+  color: #495057;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.watchlistNote {
+  font-size: 12px;
+  color: #868e96;
 }

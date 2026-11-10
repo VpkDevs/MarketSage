@@ -104,6 +104,23 @@ export class Storage {
     });
   }
 
+  // Scout Watchlist Methods
+  // Snapshots of Scout results the user chose to watch (title, price and
+  // platform at the moment they were added), stored as plain objects —
+  // the same pattern as the unified cart below.
+  private static readonly SCOUT_WATCHLIST_KEY = 'scout_watchlist';
+
+  static async getScoutWatchlist(): Promise<any[]> {
+    const result = await chrome.storage.local.get(this.SCOUT_WATCHLIST_KEY);
+    return result[this.SCOUT_WATCHLIST_KEY] || [];
+  }
+
+  static async saveScoutWatchlist(items: any[]): Promise<void> {
+    await chrome.storage.local.set({
+      [this.SCOUT_WATCHLIST_KEY]: items
+    });
+  }
+
   // Unified Cart Methods
   static async saveUnifiedCart(cartItems: any[]): Promise<void> {
     await chrome.storage.local.set({

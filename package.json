@@ -1,10 +1,10 @@
 {
   "name": "marketsage",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MarketSage - Intelligent Chinese Marketplace Assistant",
   "scripts": {
-    "dev": "webpack --config webpack.config.js --watch --mode=development",
-    "build": "webpack --config webpack.config.js --mode=production",
+    "dev": "node scripts/generate-icons.js && webpack --config webpack.config.js --watch --mode=development",
+    "build": "node scripts/generate-icons.js && webpack --config webpack.config.js --mode=production",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

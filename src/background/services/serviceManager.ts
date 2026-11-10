@@ -6,6 +6,12 @@ import {
   ScamExplanation
 } from './protect/scamExplainer';
 import { PriceAnalyzer, PriceAnalytics } from './insight/priceAnalyzer';
+import { buildPriceInsights, PriceInsight } from './insight/priceInsights';
+import {
+  ProductDiscoveryService,
+  ScoutDiscovery,
+  ScoutOptions
+} from './scout/productDiscovery';
 import { Storage } from '../../common/utils/storage';
 import { Product } from '../../common/types';
 
@@ -13,10 +19,12 @@ export class ServiceManager {
   private static instance: ServiceManager;
   private securityAnalyzer: SecurityAnalyzer;
   private priceAnalyzer: PriceAnalyzer;
+  private productDiscovery: ProductDiscoveryService;
 
   private constructor() {
     this.securityAnalyzer = new SecurityAnalyzer();
     this.priceAnalyzer = new PriceAnalyzer();
+    this.productDiscovery = new ProductDiscoveryService();
     this.initializeMessageListeners();
   }
 
@@ -74,6 +82,16 @@ export class ServiceManager {
         case 'EXPLAIN_RISK':
           const explanation = await this.explainRisk(request.productId);
           sendResponse({ success: true, data: explanation });
+          break;
+
+        case 'DISCOVER_PRODUCTS':
+          const discovery = await this.discoverProducts(request.options ?? {});
+          sendResponse({ success: true, data: discovery });
+          break;
+
+        case 'ANALYZE_PRICE_DATA':
+          const priceData = await this.analyzePriceData();
+          sendResponse({ success: true, data: priceData });
           break;
 
         default:
@@ -148,6 +166,57 @@ export class ServiceManager {
     const metrics = await this.securityAnalyzer.analyzeProduct(product);
     const apiKey = await getStoredGeminiApiKey();
     return explainScamSignals(signalsFromAnalysis(product, metrics), { apiKey });
+  }
+
+  /**
+   * Scout discovery over the device's local product cache and price
+   * history. When no search query is given, the product on the active
+   * tab (if any) is used as the similarity context; extraction failure
+   * simply means value-ranked mode. See services/scout/productDiscovery.
+   */
+  private async discoverProducts(options: ScoutOptions): Promise<ScoutDiscovery> {
+    let contextProduct = options.contextProduct ?? null;
+    if (!options.query && !contextProduct) {
+      contextProduct = await this.tryExtractActiveProduct();
+    }
+    return this.productDiscovery.discover({ ...options, contextProduct });
+  }
+
+  /** Extract the active tab's product without analyzing or caching it. */
+  private async tryExtractActiveProduct(): Promise<Product | null> {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) return null;
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_PRODUCT' });
+      return response?.success && response.data ? (response.data as Product) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Full price data for the Insight tab: the standard page analysis
+   * plus deterministic insights computed from the recorded price
+   * history (see services/insight/priceInsights).
+   */
+  private async analyzePriceData(): Promise<{
+    product: Product;
+    pricing: PriceAnalytics;
+    insights: PriceInsight[];
+    historyCount: number;
+  }> {
+    const analysis = await this.analyzeCurrentPage();
+    const insights = buildPriceInsights(
+      analysis.product,
+      analysis.pricing,
+      analysis.pricing.priceHistory
+    );
+    return {
+      product: analysis.product,
+      pricing: analysis.pricing,
+      insights,
+      historyCount: analysis.pricing.priceHistory.length
+    };
   }
 
   private async getSecurityMetrics(productId: string): Promise<SecurityMetrics> {

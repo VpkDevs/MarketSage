@@ -49,6 +49,23 @@
     "exclude": [
         "node_modules",
         "dist",
-        "development/backend/routes"
+        "development",
+        "src/service-worker.ts",
+        "src/services",
+        "src/core",
+        "src/popup/components/EnhancedApp.tsx",
+        "src/popup/components/enhanced",
+        "src/popup/components/protect/EnhancedProtectSection.tsx",
+        "src/popup/components/insight/EnhancedInsightSection.tsx",
+        "src/popup/components/scout/EnhancedScoutSection.tsx",
+        "src/background/services/cache",
+        "src/background/services/integration",
+        "src/background/services/models",
+        "src/background/services/monitoring",
+        "src/background/services/protect/aiDetector.ts",
+        "src/background/services/protect/smartRiskAssessment.ts",
+        "src/common/utils/MemoryManager.ts",
+        "src/config/AppConfig.ts",
+        "tests/setup/mocks/types.ts"
     ]
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from '../../styles/App.module.css';
 import { SecurityMetrics } from '../../../background/services/protect/securityAnalyzer';
+import { ScamExplanation } from '../../../background/services/protect/scamExplainer';
 
 interface ProtectSectionProps {
   isActive: boolean;
@@ -8,6 +9,10 @@ interface ProtectSectionProps {
 
 export const ProtectSection: React.FC<ProtectSectionProps> = ({ isActive }) => {
   const [metrics, setMetrics] = React.useState<SecurityMetrics | null>(null);
+  const [productId, setProductId] = React.useState<string | null>(null);
+  const [explanation, setExplanation] = React.useState<ScamExplanation | null>(null);
+  const [explaining, setExplaining] = React.useState(false);
+  const [explainError, setExplainError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -36,11 +41,34 @@ export const ProtectSection: React.FC<ProtectSectionProps> = ({ isActive }) => {
       }
 
       setMetrics(response.data.security);
+      setProductId(response.data.product?.id ?? null);
+      setExplanation(null);
+      setExplainError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       console.error('ProtectSection Error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const explainRisk = async () => {
+    if (!productId) return;
+    try {
+      setExplaining(true);
+      setExplainError(null);
+      const response = await chrome.runtime.sendMessage({
+        type: 'EXPLAIN_RISK',
+        productId
+      });
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to explain this listing');
+      }
+      setExplanation(response.data as ScamExplanation);
+    } catch (err) {
+      setExplainError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setExplaining(false);
     }
   };
 
@@ -107,6 +135,35 @@ export const ProtectSection: React.FC<ProtectSectionProps> = ({ isActive }) => {
               <p>No security concerns detected</p>
             </div>
           )}
+
+          <div className={styles.explanationCard}>
+            <h3>Why this score?</h3>
+            {!explanation && (
+              <button
+                className={styles.explainButton}
+                onClick={explainRisk}
+                disabled={explaining || !productId}
+              >
+                {explaining ? 'Writing explanation…' : 'Explain in plain language'}
+              </button>
+            )}
+            {explainError && <p className={styles.errorText}>{explainError}</p>}
+            {explanation && (
+              <>
+                <p className={styles.explanationSummary}>{explanation.summary}</p>
+                <ul className={styles.explanationList}>
+                  {explanation.points.map((point, index) => (
+                    <li key={index}>{point}</li>
+                  ))}
+                </ul>
+                <span className={styles.explanationSource}>
+                  {explanation.source === 'ai'
+                    ? 'Written by AI using your Gemini key'
+                    : 'Built-in explanation (no AI key set)'}
+                </span>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

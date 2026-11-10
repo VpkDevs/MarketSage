@@ -22,9 +22,11 @@ module.exports = {
           options: {
             // tsconfig sets noEmit (for editor/ts-jest use); the bundler
             // must emit. Only files in the bundle graph are type-checked
-            // here — the repo also contains an abandoned second-generation
-            // layer under src/core that nothing imports; its errors are
-            // reported by a full `tsc --noEmit`, not by the build.
+            // here. The repo also contains a second-generation layer
+            // (src/core, src/services, the Enhanced* UI, and unwired
+            // experimental services) that nothing imports; it is
+            // formally excluded from the typecheck program — see
+            // docs/second-generation-layer.md.
             compilerOptions: { noEmit: false },
             onlyCompileBundledFiles: true
           }

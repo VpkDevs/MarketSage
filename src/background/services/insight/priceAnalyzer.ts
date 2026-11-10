@@ -1,13 +1,22 @@
 import { Storage } from '../../../common/utils/storage';
 import { Product, Price } from '../../../common/types';
+import { isSimilarTitle } from '../../../common/utils/similarity';
 
 export interface PriceAnalytics {
   currentPrice: number;
   marketAverage: number;
+  /**
+   * How many similar viewed products the market average is computed
+   * from (including the product itself when it is in the cache).
+   * 0 or 1 means there is no real comparison set yet — callers must not
+   * present the "market average" as a market measurement in that case.
+   */
+  marketSampleSize: number;
   priceHistory: Array<{
     price: number;
     timestamp: string;
   }>;
+  /** 0..1 — higher means better value vs. the comparison set. */
   valueScore: number;
   trend: 'rising' | 'falling' | 'stable';
   recommendations: string[];
@@ -26,13 +35,17 @@ export class PriceAnalyzer {
     // existing building blocks (this method previously called four
     // helper methods that never existed on the class).
     const history = await this.getPriceHistory(product.id);
-    const marketAverage = await this.calculateMarketAverage(product);
+    const marketData = await this.getMarketData(product);
+    const marketAverage = marketData.length === 0
+      ? product.price.current
+      : marketData.reduce((sum, p) => sum + p.price.current, 0) / marketData.length;
     const valueScore = this.calculateValueScore(product.price.current, marketAverage, product);
     const trend = this.analyzePriceTrend(history);
 
     return {
       currentPrice: product.price.current,
       marketAverage,
+      marketSampleSize: marketData.length,
       priceHistory: history.map(entry => ({
         price: entry.current,
         timestamp: entry.timestamp
@@ -61,14 +74,6 @@ export class PriceAnalyzer {
       p.platform === product.platform && 
       this.isSimilarProduct(p, product)
     );
-  }
-
-  private async calculateMarketAverage(product: Product): Promise<number> {
-    const marketData = await this.getMarketData(product);
-    if (marketData.length === 0) return product.price.current;
-
-    const prices = marketData.map(p => p.price.current);
-    return prices.reduce((sum, price) => sum + price, 0) / prices.length;
   }
 
   private calculateValueScore(
@@ -142,14 +147,9 @@ export class PriceAnalyzer {
   }
 
   private isSimilarProduct(p1: Product, p2: Product): boolean {
-    // Simple similarity check based on title
-    const words1 = new Set(p1.title.toLowerCase().split(/\s+/));
-    const words2 = new Set(p2.title.toLowerCase().split(/\s+/));
-    
-    // Calculate Jaccard similarity
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
-    const union = new Set([...words1, ...words2]);
-    
-    return intersection.size / union.size > 0.3; // 30% similarity threshold
+    // Shared title-similarity helper (see common/utils/similarity):
+    // Jaccard similarity over title words, 30% threshold — the same
+    // rule this class has always applied, now shared with Scout.
+    return isSimilarTitle(p1.title, p2.title);
   }
 }

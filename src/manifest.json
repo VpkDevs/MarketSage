@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
   "name": "MarketSage",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Your Intelligent Marketplace Guide - Smart shopping assistant for Chinese marketplaces",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting",
     "tabs",
     "notifications"
   ],

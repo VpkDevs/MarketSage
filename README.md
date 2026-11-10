@@ -2,6 +2,8 @@
 
 **Your intelligent marketplace guide** — a Chrome extension (Manifest V3) that helps you shop Chinese marketplaces safely. MarketSage analyzes product pages on **Temu, AliExpress, and DHgate** for scam signals and pricing games, and explains what it finds in plain language.
 
+Current version: **1.1.0** — see [CHANGELOG.md](CHANGELOG.md) for what changed.
+
 ## What it does
 
 ### 🛡️ Protect — scam detection on the page you're viewing
@@ -22,20 +24,28 @@ The background worker also watches tab loads: on a supported product page it upd
 
 For each analyzed product, MarketSage keeps a **price history** (stored locally) and computes:
 
-- Market average from similar cached products
-- A **value score** (price vs. market, adjusted for seller rating)
+- Market average from similar products you have viewed — always labeled with how many products that average rests on (with only one, the UI says so instead of dressing up a single price as a "market")
+- A **value score** shown out of 100 (price vs. market, adjusted for seller rating)
 - Price **trend** (rising / falling / stable)
 - Buy/wait **recommendations** based on value and trend
+- **Price insights** computed from the recorded history: drops and rises since your last visit, strong-deal flags (only when the comparison average rests on at least one other viewed product), and a trend note once three or more prices exist. These are arithmetic on prices MarketSage actually recorded — no forecasts and no competitor data
 
-### 🔍 Scout — cross-platform cart
+### 🔍 Scout — discovery across what you've already viewed
 
-A unified cart and checkout-session manager lets products from different marketplaces be grouped into a single checkout session, with scam filtering applied to search results according to your preferences. (See *Known limitations* — live product discovery is not wired to real marketplace APIs yet.)
+Scout searches and ranks the products MarketSage has recorded in **your browser** as you browsed Temu, AliExpress, and DHgate:
 
-### 🤖 AI explanations (new, bring-your-own-key)
+- **Search** your viewed products by title words
+- **Similar** — products resembling the one you're viewing, by title overlap
+- **Best value** — ranked by recorded price drops, listed discounts, and ratings
+- Filters (marketplace, deals-only, sort), a deals view, and a **watchlist** that keeps each item with the price it had when you added it
+
+Scout is deliberately local: it has no catalog and makes no network requests, so it can only surface products you have actually opened — and the UI says exactly that. (A unified-cart storage layer also exists for grouping products across marketplaces; it has no UI yet.)
+
+### 🤖 AI explanations (bring-your-own-key)
 
 Raw signals are terse. Protect's **"Explain in plain language"** button turns them into a short, readable explanation of *why* a listing looks risky.
 
-- **With your own Google Gemini API key** (entered in Settings → *AI Explanations*): the signals are sent to Gemini (`gemini-2.0-flash` by default), which writes the explanation using only those signals.
+- **With your own Google Gemini API key** (entered in the popup's ⚙️ settings panel): the signals are sent to Gemini (`gemini-2.0-flash` by default), which writes the explanation using only those signals.
 - **Without a key** — the default — you still get an explanation: a built-in template written from the same signals. If the API call fails for any reason, the extension falls back to the built-in text automatically.
 
 Your key is stored only in your browser's extension storage and is sent only to `generativelanguage.googleapis.com`. No key is bundled with the extension, and no explanation request is made at all until you ask for one.
@@ -59,27 +69,27 @@ The toolbar badge turns **ON** when the extension initializes. Open any Temu, Al
 
 ```bash
 npm run dev            # webpack watch build (development mode)
-npm run build          # production build into dist/ (runs npm run verify first)
+npm run build          # production build into dist/
 npm test               # full jest suite
 npm run test:unit      # unit tests only
 npm run test:ui        # popup component tests
 npm run test:e2e       # end-to-end user scenarios
 npm run verify         # project sanity checks (scripts/verify-build.js)
-node scripts/generate-icons.js   # regenerate the extension icons
+node scripts/generate-icons.js   # regenerate the extension icons (build/dev run this automatically)
 ```
 
 ## Architecture
 
 | Piece | Where | Role |
 |---|---|---|
-| Popup UI | `src/popup/` | React app with Protect / Insight / Scout sections and a shared component library |
+| Popup UI | `src/popup/` | React app with Protect / Insight / Scout sections — no account, no login; it opens straight into the tools |
 | Content script | `src/content/` | Runs on marketplace pages: platform detection + product extraction from the DOM |
-| Background worker | `src/background/` | `ServiceManager` message hub; `SecurityAnalyzer`, `PriceAnalyzer`, and the AI explainer |
+| Background worker | `src/background/` | `ServiceManager` message hub; `SecurityAnalyzer`, `PriceAnalyzer` + price insights, `ProductDiscoveryService` (Scout), and the AI explainer |
 | Detection model | `src/common/models/` | `ScamDetectionModel` + per-signal engines, user preference handling |
-| Storage | `src/common/utils/storage.ts` | All persistence in `chrome.storage.local` (price history, product cache, seller ratings, carts, prefs) |
-| Auth | `src/core/auth/` | Local account/session management used by the popup |
+| Storage | `src/common/utils/storage.ts` | All persistence in `chrome.storage.local` (price history, product cache, seller ratings, carts, Scout watchlist, prefs) |
+| Second-gen layer | `src/core/`, `src/services/`, Enhanced UI | Unwired experimental codebase, excluded from build/typecheck — see `docs/second-generation-layer.md` |
 
-Message flow for an analysis: popup → background `ANALYZE_CURRENT_PAGE` → background asks the active tab's content script to `EXTRACT_PRODUCT` → background analyzes, caches the product and its price, and returns `{ product, security, pricing }`. Explanations: popup → background `EXPLAIN_RISK` (by product id) → explainer.
+Message flows: analysis — popup → background `ANALYZE_CURRENT_PAGE` → background asks the active tab's content script to `EXTRACT_PRODUCT` → background analyzes, caches the product and its price, and returns `{ product, security, pricing }`. Price data — popup → `ANALYZE_PRICE_DATA` → same analysis plus insights from the recorded history. Scout — popup → `DISCOVER_PRODUCTS` → ranking over the local product cache/history (no network). Explanations — popup → `EXPLAIN_RISK` (by product id) → explainer.
 
 ## Privacy
 
@@ -87,11 +97,11 @@ Everything is local by default: extracted products, price history, and preferenc
 
 ## Known limitations (honest list)
 
-- **Scout discovery is a shell**: the unified cart/checkout code is real, but live product search across marketplaces is a placeholder (`fetchFromPlatform` returns nothing yet), and two Enhanced-section actions (`DISCOVER_PRODUCTS`, `ANALYZE_PRICE_DATA`) have no backend implementation yet.
-- Three preference heuristics are defined but have no engine yet (`new_seller_large_inventory`, `specification_anomalies`, `product_description_analysis`). The model now correctly treats them as *not assessed* instead of silently scoring them zero.
-- The Enhanced popup's variant styling is partially unstyled: the component library composes BEM-style class names that the stylesheet (camelCase) doesn't define.
-- `src/core/` and `src/service-worker.ts` contain an abandoned second-generation layer that nothing imports; the production build type-checks only the bundled graph.
-- Accounts are local-only (no server sync), and the risk-score blend in `SecurityAnalyzer` is pinned by tests but its argument order deserves a second look.
+- **Scout only knows what you've viewed.** Discovery runs over the products recorded in this browser; it is not connected to live marketplace catalogs or APIs, so it cannot find a product you haven't opened. Price history and insights likewise only accumulate from pages you visit while the extension is installed.
+- Three preference heuristics are defined but have no engine yet (`new_seller_large_inventory`, `specification_anomalies`, `product_description_analysis`). The model correctly treats them as *not assessed* instead of silently scoring them zero.
+- The second-generation layer (`src/core/`, `src/services/`, the Enhanced UI, and several unwired experimental services) is formally excluded from the build and typecheck; whether it is deleted or repaired into a real v2 is the owner's pending decision — see `docs/second-generation-layer.md`.
+- The risk-score blend in `SecurityAnalyzer` is pinned by tests but its argument order deserves a second look.
+- A stray 0-byte `README` file sits beside this `README.md`; removing it is pending the owner's call.
 
 ## License
 
