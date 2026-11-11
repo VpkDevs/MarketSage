@@ -23,7 +23,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test -- --ci
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: marketsage-dist
           path: dist/
