@@ -41,3 +41,20 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 .hai/
+
+# appended by publish script
+node_modules/
+.env.*
+!.env.example
+*.log
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
