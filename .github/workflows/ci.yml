@@ -24,11 +24,11 @@ jobs:
       - run: npm test -- --ci
       - run: npm run build
       - run: npm run package -- --skip-build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: marketsage-dist
           path: dist/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: marketsage-release-zip
           path: |
