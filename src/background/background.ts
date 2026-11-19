@@ -1,37 +1,59 @@
 import { ServiceManager } from './services/serviceManager';
 
-// Get the singleton instance
+const SUPPORTED_MARKETPLACE_DOMAINS = ['temu.com', 'aliexpress.com', 'dhgate.com'] as const;
+
+export interface ExtensionSettings {
+  autoAnalyze: boolean;
+  notificationsEnabled: boolean;
+  priceAlerts: boolean;
+  securityAlerts: boolean;
+}
+
+const DEFAULT_SETTINGS: ExtensionSettings = {
+  autoAnalyze: true,
+  notificationsEnabled: true,
+  priceAlerts: true,
+  securityAlerts: true
+};
+
+// Get the singleton instance (this registers the single runtime.onMessage listener)
 const serviceManager = ServiceManager.getInstance();
 
-// Initialize extension when installed or updated
-chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === 'install') {
-    console.log('MarketSage: Extension installed');
-    await initializeExtension();
-  } else if (details.reason === 'update') {
-    console.log('MarketSage: Extension updated');
-    await handleUpdate(details.previousVersion);
+/**
+ * Return true only for HTTP/HTTPS URLs belonging to a supported marketplace
+ * domain (exact match or subdomain). Prevents messaging non-marketplace tabs
+ * where content.js is not injected.
+ */
+export function isSupportedMarketplaceUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    return SUPPORTED_MARKETPLACE_DOMAINS.some(
+      domain => hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+  } catch {
+    return false;
   }
-});
+}
 
-// Listen for tab updates to analyze new pages
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    handleTabUpdate(tabId, tab.url);
+async function readSettings(): Promise<ExtensionSettings> {
+  const stored = await chrome.storage.local.get('settings');
+  const nested = stored?.settings;
+  if (nested && typeof nested === 'object') {
+    return { ...DEFAULT_SETTINGS, ...nested };
   }
-});
+  return DEFAULT_SETTINGS;
+}
 
 // Initialize extension settings and data
-async function initializeExtension() {
+export async function initializeExtension(): Promise<void> {
   try {
     // Set default extension settings
     await chrome.storage.local.set({
-      settings: {
-        autoAnalyze: true,
-        notificationsEnabled: true,
-        priceAlerts: true,
-        securityAlerts: true
-      }
+      settings: { ...DEFAULT_SETTINGS }
     });
 
     // Clear any existing analysis cache
@@ -49,13 +71,13 @@ async function initializeExtension() {
 }
 
 // Handle extension updates
-async function handleUpdate(previousVersion: string | undefined) {
+export async function handleUpdate(previousVersion: string | undefined): Promise<void> {
   try {
     console.log('MarketSage: Updating from version', previousVersion);
-    
+
     // Clear outdated cache
     await serviceManager.clearAnalysisCache();
-    
+
     // Update badge
     await chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
     await chrome.action.setBadgeText({ text: 'ON' });
@@ -68,18 +90,21 @@ async function handleUpdate(previousVersion: string | undefined) {
 }
 
 // Handle tab updates
-async function handleTabUpdate(tabId: number, url: string) {
+export async function handleTabUpdate(tabId: number, url: string): Promise<void> {
+  if (!isSupportedMarketplaceUrl(url)) {
+    return;
+  }
+
   try {
-    // Check if URL is from a supported marketplace
-    const settings = await chrome.storage.local.get('settings');
+    const settings = await readSettings();
     if (!settings.autoAnalyze) return;
 
-    // Get platform detector from service manager
+    // Ask the injected content script whether this tab is a supported page
     const platformDetector = await chrome.tabs.sendMessage(tabId, {
       type: 'CHECK_PLATFORM'
     });
 
-    if (platformDetector.isSupported) {
+    if (platformDetector?.isSupported) {
       // Update badge to show analysis is in progress
       await chrome.action.setBadgeBackgroundColor({ color: '#FFC107' });
       await chrome.action.setBadgeText({ text: '...' });
@@ -102,7 +127,11 @@ async function handleTabUpdate(tabId: number, url: string) {
       }
 
       // Show notification if there are high-risk warnings
-      if (settings.notificationsEnabled && security.warnings.length > 0) {
+      if (
+        settings.notificationsEnabled &&
+        security.warnings.length > 0 &&
+        chrome.notifications?.create
+      ) {
         chrome.notifications.create({
           type: 'basic',
           iconUrl: 'icons/icon128.png',
@@ -119,14 +148,22 @@ async function handleTabUpdate(tabId: number, url: string) {
   }
 }
 
-// Listen for messages from content scripts or popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Forward messages to service manager
-  serviceManager.handleMessage(message, sender, sendResponse);
-  return true; // Keep the message channel open for async response
-});
+// Register MV3 lifecycle listeners when running inside the extension runtime.
+// Note: chrome.runtime.onMessage is registered once by ServiceManager.getInstance().
+if (typeof chrome !== 'undefined') {
+  chrome.runtime?.onInstalled?.addListener(async (details) => {
+    if (details.reason === 'install') {
+      console.log('MarketSage: Extension installed');
+      await initializeExtension();
+    } else if (details.reason === 'update') {
+      console.log('MarketSage: Extension updated');
+      await handleUpdate(details.previousVersion);
+    }
+  });
 
-// Handle extension uninstall
-chrome.runtime.setUninstallURL('https://marketsage.com/feedback', () => {
-  console.log('MarketSage: Extension uninstalled');
-});
+  chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url) {
+      handleTabUpdate(tabId, tab.url);
+    }
+  });
+}

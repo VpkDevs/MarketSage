@@ -61,17 +61,20 @@ describe('buildFallbackExplanation', () => {
 });
 
 describe('explainScamSignals', () => {
-  it('returns the fallback without calling fetch when no key is provided', async () => {
+  it('returns the fallback with BYOK_KEY_MISSING without calling fetch when no key is provided', async () => {
     const fetchFn = jest.fn();
     const result = await explainScamSignals(riskySignals, { fetchFn });
     expect(result.source).toBe('fallback');
+    expect(result.errorCode).toBe('BYOK_KEY_MISSING');
+    expect(result.errorMessage).toContain('No Gemini API key');
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it('returns the fallback when the key is blank', async () => {
+  it('returns the fallback with BYOK_KEY_MISSING when the key is blank (never uses a house key)', async () => {
     const fetchFn = jest.fn();
     const result = await explainScamSignals(riskySignals, { apiKey: '   ', fetchFn });
     expect(result.source).toBe('fallback');
+    expect(result.errorCode).toBe('BYOK_KEY_MISSING');
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
@@ -116,26 +119,64 @@ describe('explainScamSignals', () => {
     expect(body.contents[0].parts[0].text).toContain('Price is suspiciously low');
   });
 
-  it('falls back when the API returns an error status', async () => {
-    const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 400 });
+  it('falls back with BYOK_API_ERROR when the API returns a non-auth error status', async () => {
+    const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 500 });
     const result = await explainScamSignals(riskySignals, {
-      apiKey: 'bad-key',
+      apiKey: 'test-key',
       fetchFn
     });
     expect(result.source).toBe('fallback');
+    expect(result.errorCode).toBe('BYOK_API_ERROR');
+    expect(result.errorMessage).toContain('HTTP 500');
     expect(result.summary).toContain('2 things');
   });
 
-  it('falls back when the network call throws', async () => {
+  it('falls back with BYOK_INVALID_KEY on HTTP 401/403 or 400 API_KEY_INVALID', async () => {
+    const fetch401 = jest.fn().mockResolvedValue({ ok: false, status: 401 });
+    const res401 = await explainScamSignals(riskySignals, {
+      apiKey: 'bad-key',
+      fetchFn: fetch401
+    });
+    expect(res401.source).toBe('fallback');
+    expect(res401.errorCode).toBe('BYOK_INVALID_KEY');
+    expect(res401.errorMessage).toContain('401');
+
+    const fetch400 = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { status: 'INVALID_ARGUMENT', message: 'API key not valid' } })
+    });
+    const res400 = await explainScamSignals(riskySignals, {
+      apiKey: 'bad-key',
+      fetchFn: fetch400
+    });
+    expect(res400.source).toBe('fallback');
+    expect(res400.errorCode).toBe('BYOK_INVALID_KEY');
+  });
+
+  it('falls back with BYOK_RATE_LIMITED on HTTP 429', async () => {
+    const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 429 });
+    const result = await explainScamSignals(riskySignals, {
+      apiKey: 'rate-limited-key',
+      fetchFn
+    });
+    expect(result.source).toBe('fallback');
+    expect(result.errorCode).toBe('BYOK_RATE_LIMITED');
+    expect(result.errorMessage).toContain('429');
+  });
+
+  it('falls back with BYOK_NETWORK_ERROR when the network call throws', async () => {
     const fetchFn = jest.fn().mockRejectedValue(new Error('offline'));
     const result = await explainScamSignals(riskySignals, {
       apiKey: 'test-key',
       fetchFn
     });
     expect(result.source).toBe('fallback');
+    expect(result.errorCode).toBe('BYOK_NETWORK_ERROR');
+    expect(result.errorMessage).toContain('offline');
   });
 
-  it('falls back when the API reply has no text', async () => {
+  it('falls back with BYOK_EMPTY_RESPONSE when the API reply has no text', async () => {
     const fetchFn = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ candidates: [] })
@@ -145,6 +186,7 @@ describe('explainScamSignals', () => {
       fetchFn
     });
     expect(result.source).toBe('fallback');
+    expect(result.errorCode).toBe('BYOK_EMPTY_RESPONSE');
   });
 });
 

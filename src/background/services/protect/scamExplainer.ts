@@ -32,11 +32,27 @@ export interface ScamSignals {
   warnings: string[];
 }
 
+export type ByokErrorCode =
+  | 'BYOK_KEY_MISSING'
+  | 'BYOK_INVALID_KEY'
+  | 'BYOK_RATE_LIMITED'
+  | 'BYOK_API_ERROR'
+  | 'BYOK_NETWORK_ERROR'
+  | 'BYOK_EMPTY_RESPONSE';
+
 export interface ScamExplanation {
   summary: string;
   points: string[];
   /** 'ai' when written by Gemini, 'fallback' for the built-in template. */
   source: 'ai' | 'fallback';
+  /**
+   * Explicit coded reason whenever the built-in deterministic template was
+   * returned instead of a BYOK Gemini response. Never silently falls back
+   * to any bundled or house API key.
+   */
+  errorCode?: ByokErrorCode;
+  /** Human-readable explanation of why BYOK AI was not used. */
+  errorMessage?: string;
 }
 
 export const AI_SETTINGS_KEY = 'marketsage_ai_settings';
@@ -166,10 +182,55 @@ function parseAiText(text: string): ScamExplanation | null {
   return { summary, points: points.length > 0 ? points : [summary], source: 'ai' };
 }
 
+async function classifyHttpError(
+  response: Response
+): Promise<{ errorCode: ByokErrorCode; errorMessage: string }> {
+  const status = typeof response.status === 'number' ? response.status : 0;
+
+  if (status === 401 || status === 403) {
+    return {
+      errorCode: 'BYOK_INVALID_KEY',
+      errorMessage: `Gemini rejected your API key (HTTP ${status}). Verify your key in Settings.`
+    };
+  }
+
+  if (status === 429) {
+    return {
+      errorCode: 'BYOK_RATE_LIMITED',
+      errorMessage: 'Gemini rate limit or quota exceeded (HTTP 429). Try again later or check your API quota.'
+    };
+  }
+
+  if (status === 400) {
+    try {
+      if (typeof response.json === 'function') {
+        const body: any = await response.json();
+        const detail = JSON.stringify(body ?? '');
+        if (/API_KEY_INVALID|API key not valid/i.test(detail)) {
+          return {
+            errorCode: 'BYOK_INVALID_KEY',
+            errorMessage: 'Gemini reported that your API key is invalid (HTTP 400). Verify your key in Settings.'
+          };
+        }
+      }
+    } catch {
+      // Ignore unparseable error payloads and report BYOK_API_ERROR below.
+    }
+  }
+
+  return {
+    errorCode: 'BYOK_API_ERROR',
+    errorMessage: status
+      ? `Gemini API returned HTTP ${status}; showing built-in explanation.`
+      : 'Gemini API request failed; showing built-in explanation.'
+  };
+}
+
 /**
- * Explain the given scam signals. Uses Gemini when a key is provided;
- * falls back to the built-in template explanation when there is no key
- * or the API call fails. Never throws.
+ * Explain the given scam signals. Uses Gemini when the user's own BYOK key
+ * is provided; returns the built-in deterministic explanation with an
+ * explicit coded error (`errorCode`) when no key is set or the API call
+ * fails. Never uses a house/bundled key and never throws.
  */
 export async function explainScamSignals(
   signals: ScamSignals,
@@ -178,7 +239,11 @@ export async function explainScamSignals(
   const fallback = buildFallbackExplanation(signals);
   const apiKey = options.apiKey?.trim();
   if (!apiKey) {
-    return fallback;
+    return {
+      ...fallback,
+      errorCode: 'BYOK_KEY_MISSING',
+      errorMessage: 'No Gemini API key configured; showing built-in explanation.'
+    };
   }
 
   const fetchFn = options.fetchFn ?? fetch;
@@ -201,7 +266,11 @@ export async function explainScamSignals(
     );
 
     if (!response.ok) {
-      return fallback;
+      const classified = await classifyHttpError(response);
+      return {
+        ...fallback,
+        ...classified
+      };
     }
 
     const data: any = await response.json();
@@ -211,11 +280,29 @@ export async function explainScamSignals(
       .join('\n');
 
     if (!text) {
-      return fallback;
+      return {
+        ...fallback,
+        errorCode: 'BYOK_EMPTY_RESPONSE',
+        errorMessage: 'Gemini returned an empty response; showing built-in explanation.'
+      };
     }
 
-    return parseAiText(text) ?? fallback;
-  } catch {
-    return fallback;
+    const parsed = parseAiText(text);
+    if (!parsed) {
+      return {
+        ...fallback,
+        errorCode: 'BYOK_EMPTY_RESPONSE',
+        errorMessage: 'Gemini returned an unparseable response; showing built-in explanation.'
+      };
+    }
+
+    return parsed;
+  } catch (error) {
+    const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
+    return {
+      ...fallback,
+      errorCode: 'BYOK_NETWORK_ERROR',
+      errorMessage: `Could not reach Gemini API${detail}; showing built-in explanation.`
+    };
   }
 }

@@ -159,7 +159,9 @@ export const ProtectSection: React.FC<ProtectSectionProps> = ({ isActive }) => {
                 <span className={styles.explanationSource}>
                   {explanation.source === 'ai'
                     ? 'Written by AI using your Gemini key'
-                    : 'Built-in explanation (no AI key set)'}
+                    : explanation.errorCode && explanation.errorCode !== 'BYOK_KEY_MISSING'
+                      ? `Built-in explanation — AI unavailable (${explanation.errorCode}): ${explanation.errorMessage ?? 'Gemini request failed'}`
+                      : 'Built-in explanation (no AI key set)'}
                 </span>
               </>
             )}

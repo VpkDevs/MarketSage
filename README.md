@@ -2,7 +2,7 @@
 
 **Your intelligent marketplace guide** — a Chrome extension (Manifest V3) that helps you shop Chinese marketplaces safely. MarketSage analyzes product pages on **Temu, AliExpress, and DHgate** for scam signals and pricing games, and explains what it finds in plain language.
 
-Current version: **1.1.0** — see [CHANGELOG.md](CHANGELOG.md) for what changed.
+Current version: **1.1.0** — see [CHANGELOG.md](CHANGELOG.md) for what changed, [DEPLOYMENT.md](DEPLOYMENT.md) for Chrome Web Store / Edge Add-ons packaging & submission, and [PRIVACY.md](PRIVACY.md) for privacy disclosures.
 
 ## What it does
 
@@ -70,6 +70,10 @@ The toolbar badge turns **ON** when the extension initializes. Open any Temu, Al
 ```bash
 npm run dev            # webpack watch build (development mode)
 npm run build          # production build into dist/
+npm run package        # clean build + MV3 dist/ integrity audit + release/marketsage-v<ver>.zip
+npm run audit:dist     # verify dist/manifest.json assets, PNG dimensions, CSP, and zero leaks
+npm run typecheck      # strict TypeScript check (tsc --noEmit)
+npm run lint           # ESLint check across src/
 npm test               # full jest suite
 npm run test:unit      # unit tests only
 npm run test:ui        # popup component tests

@@ -56,4 +56,45 @@ describe('ProtectSection — explain in plain language', () => {
     // The no-key built-in source is labeled, not passed off as AI
     expect(screen.getByText('Built-in explanation (no AI key set)')).toBeInTheDocument();
   });
+
+  it('surfaces explicit coded BYOK error when a configured Gemini key fails', async () => {
+    (chrome.runtime.sendMessage as jest.Mock).mockImplementation(async (message: any) => {
+      if (message.type === 'ANALYZE_CURRENT_PAGE') {
+        return {
+          success: true,
+          data: {
+            product: { id: 'prod-1' },
+            security: { riskScore: 42, warnings: ['Price is suspiciously low compared to history'], sellerTrust: 35 }
+          }
+        };
+      }
+      if (message.type === 'EXPLAIN_RISK') {
+        return {
+          success: true,
+          data: {
+            summary: 'MarketSage flagged one thing to look at before buying this item:',
+            points: ['The price is far below what this kind of item normally sells for.'],
+            source: 'fallback',
+            errorCode: 'BYOK_INVALID_KEY',
+            errorMessage: 'Gemini rejected your API key (HTTP 401). Verify your key in Settings.'
+          }
+        };
+      }
+      return { success: false, error: 'Unknown request type' };
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<ProtectSection isActive={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Explain in plain language' })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Explain in plain language' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/BYOK_INVALID_KEY/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Gemini rejected your API key/)).toBeInTheDocument();
+  });
 });

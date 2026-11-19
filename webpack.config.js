@@ -2,68 +2,75 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-module.exports = {
-  entry: {
-    popup: './src/popup/index.tsx',
-    content: './src/content/index.ts',
-    background: './src/background/background.ts'
-  },
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: '[name].js',
-    clean: true
-  },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: {
-          loader: 'ts-loader',
-          options: {
-            // tsconfig sets noEmit (for editor/ts-jest use); the bundler
-            // must emit. Only files in the bundle graph are type-checked
-            // here. The repo also contains a second-generation layer
-            // (src/core, src/services, the Enhanced* UI, and unwired
-            // experimental services) that nothing imports; it is
-            // formally excluded from the typecheck program — see
-            // docs/second-generation-layer.md.
-            compilerOptions: { noEmit: false },
-            onlyCompileBundledFiles: true
-          }
+module.exports = (_env, argv) => {
+  const isDev = argv && argv.mode === 'development';
+
+  return {
+    // MV3 forbids 'eval' under extension_pages CSP; use cheap-module-source-map
+    // in dev and emit zero source maps in production store bundles.
+    devtool: isDev ? 'cheap-module-source-map' : false,
+    entry: {
+      popup: './src/popup/index.tsx',
+      content: './src/content/index.ts',
+      background: './src/background/background.ts'
+    },
+    output: {
+      path: path.resolve(__dirname, 'dist'),
+      filename: '[name].js',
+      clean: true
+    },
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          use: {
+            loader: 'ts-loader',
+            options: {
+              // tsconfig sets noEmit (for editor/ts-jest use); the bundler
+              // must emit. Only files in the bundle graph are type-checked
+              // here. The repo also contains a second-generation layer
+              // (src/core, src/services, the Enhanced* UI, and unwired
+              // experimental services) that nothing imports; it is
+              // formally excluded from the typecheck program — see
+              // docs/second-generation-layer.md.
+              compilerOptions: { noEmit: false },
+              onlyCompileBundledFiles: true
+            }
+          },
+          exclude: /node_modules/
         },
-        exclude: /node_modules/
-      },
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader']
-      }
-    ]
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-    alias: {
-      '@common': path.resolve(__dirname, 'src/common'),
-      '@content': path.resolve(__dirname, 'src/content'),
-      '@background': path.resolve(__dirname, 'src/background'),
-      '@popup': path.resolve(__dirname, 'src/popup')
-    }
-  },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: './public/popup.html',
-      filename: 'popup.html',
-      chunks: ['popup']
-    }),
-    // Assemble the loadable extension: manifest + icons alongside the
-    // bundles (popup.html, popup.js, content.js, background.js).
-    new CopyWebpackPlugin({
-      patterns: [
-        { from: 'src/manifest.json', to: 'manifest.json' },
-        { from: 'public/icons', to: 'icons' }
+        {
+          test: /\.css$/,
+          use: ['style-loader', 'css-loader']
+        }
       ]
-    })
-  ]
-  // NOTE: no splitChunks. Chrome content scripts and MV3 service workers
-  // must each be a single self-contained file; shared chunks would make
-  // content.js/background.js fail to load.
+    },
+    resolve: {
+      extensions: ['.tsx', '.ts', '.js'],
+      alias: {
+        '@common': path.resolve(__dirname, 'src/common'),
+        '@content': path.resolve(__dirname, 'src/content'),
+        '@background': path.resolve(__dirname, 'src/background'),
+        '@popup': path.resolve(__dirname, 'src/popup')
+      }
+    },
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: './public/popup.html',
+        filename: 'popup.html',
+        chunks: ['popup']
+      }),
+      // Assemble the loadable extension: manifest + icons alongside the
+      // bundles (popup.html, popup.js, content.js, background.js).
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: 'src/manifest.json', to: 'manifest.json' },
+          { from: 'public/icons', to: 'icons' }
+        ]
+      })
+    ]
+    // NOTE: no splitChunks. Chrome content scripts and MV3 service workers
+    // must each be a single self-contained file; shared chunks would make
+    // content.js/background.js fail to load.
+  };
 };

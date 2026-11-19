@@ -84,6 +84,19 @@ try {
   } else {
     passes.push('✅ manifest.json has all required fields');
   }
+
+  if (manifest.manifest_version !== 3) {
+    issues.push(`❌ manifest.json must use manifest_version 3 (found ${manifest.manifest_version})`);
+  } else {
+    passes.push('✅ manifest.json uses Manifest V3');
+  }
+
+  const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  if (pkg.version && manifest.version && pkg.version !== manifest.version) {
+    issues.push(`❌ Version mismatch: package.json (${pkg.version}) vs src/manifest.json (${manifest.version})`);
+  } else {
+    passes.push(`✅ manifest.json version (${manifest.version}) matches package.json`);
+  }
   
   // Check permissions
   if (!manifest.permissions || !Array.isArray(manifest.permissions)) {
